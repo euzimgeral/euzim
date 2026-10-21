@@ -87,12 +87,14 @@ async function getCurrentUserUncached(): Promise<AuthUser | null> {
     try {
       profile = await withTimeout(
         15_000,
-        db
-          .from("users")
-          .select("role, full_name, onboarding_completed")
-          .eq("id", user.id)
-          .maybeSingle()
-          .then((r) => r.data as ProfileGateRow | null),
+        Promise.resolve(
+          db
+            .from("users")
+            .select("role, full_name, onboarding_completed")
+            .eq("id", user.id)
+            .maybeSingle()
+            .then((r) => r.data as ProfileGateRow | null),
+        ),
       );
     } catch {
       profile = null;

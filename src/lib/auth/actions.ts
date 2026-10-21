@@ -266,8 +266,10 @@ export async function signInAction(
       applyReferralAttribution(user.id),
     ]).catch(() => {});
 
-    let profile: { onboarding_completed?: boolean; role?: string } | null =
-      await fetchProfileViaRest(user.id);
+    let profile: {
+      onboarding_completed?: boolean | null;
+      role?: string | null;
+    } | null = await fetchProfileViaRest(user.id);
 
     if (!profile) {
       const db = createAdminClient() ?? supabase;
