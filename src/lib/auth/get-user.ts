@@ -66,9 +66,9 @@ async function getCurrentUserUncached(): Promise<AuthUser | null> {
   } | null = null;
 
   try {
-    // Sessão vem de cookies locais — 8s cobre DNS flaky sem mentir "sem user".
+    // Cookies locais — teto curto: AuthRetryableFetchError não pode segurar RSC/Suspense.
     user = await withTimeout(
-      8000,
+      2500,
       supabase.auth.getSession().then((r) => r.data.session?.user ?? null),
     );
   } catch {

@@ -3,6 +3,7 @@ import {
   hashNamePart,
   hashPhone,
   normalizeEmail,
+  sha256Hex,
   splitName,
 } from "@/lib/tracking/hash";
 import type { TrackingEventInput, TrackingPixelRow } from "@/lib/tracking/types";
@@ -46,9 +47,18 @@ export async function sendMetaCapi(
   if (input.userAgent) userData.client_user_agent = input.userAgent;
   if (input.attribution?.fbp) userData.fbp = input.attribution.fbp;
   if (input.attribution?.fbc) userData.fbc = input.attribution.fbc;
-  if (input.user?.userId) userData.external_id = [input.user.userId];
+  if (input.user?.userId) {
+    userData.external_id = [sha256Hex(String(input.user.userId).trim())];
+  }
 
-  const customData: Record<string, unknown> = {};
+  const customData: Record<string, unknown> = {
+    ...(input.commerce?.planId
+      ? { content_ids: [input.commerce.planId] }
+      : {}),
+    ...(input.commerce?.product
+      ? { content_name: input.commerce.product }
+      : {}),
+  };
   if (input.commerce?.value != null) {
     customData.value = input.commerce.value;
     customData.currency = (input.commerce.currency || "BRL").toUpperCase();
@@ -57,12 +67,9 @@ export async function sendMetaCapi(
     customData.contents = input.commerce.contents;
     customData.content_type = "product";
   }
-  if (input.commerce?.planId) customData.content_ids = [input.commerce.planId];
-  if (fullName && input.commerce?.product) {
-    customData.content_name = input.commerce.product;
-  } else if (input.commerce?.product) {
-    customData.content_name = input.commerce.product;
-  }
+  // Funil: evento + landing
+  customData.funnel_event = input.event;
+  if (fullName) customData.customer_name = fullName;
 
   const eventTime = Math.floor(Date.now() / 1000);
   const eventId = input.eventId || crypto.randomUUID();
@@ -94,6 +101,7 @@ export async function sendMetaCapi(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          signal: AbortSignal.timeout(8000),
         });
         if (!res.ok) {
           const text = await res.text().catch(() => "");

@@ -19,6 +19,7 @@ import {
   signUpAction,
   type AuthActionResult,
 } from "@/lib/auth/actions";
+import { trackBrowserEvent } from "@/lib/tracking/client-browser";
 
 type Mode = "login" | "signup";
 
@@ -35,7 +36,38 @@ export function AuthForm({
   nextPath?: string | null;
 }) {
   const action = mode === "login" ? signInAction : signUpAction;
-  const [state, formAction, pending] = useActionState(action, initial);
+  const [state, formAction, pending] = useActionState(
+    async (prev: AuthActionResult, formData: FormData) => {
+      if (mode === "signup") {
+        const email = String(formData.get("email") ?? "")
+          .trim()
+          .toLowerCase();
+        const fullName = String(formData.get("fullName") ?? "").trim();
+        const phoneRaw = String(formData.get("phone") ?? "").trim();
+        const phoneDigits = phoneRaw.replace(/\D/g, "");
+        const phone =
+          phoneDigits && phoneDigits.length >= 8 && phoneDigits.length <= 20
+            ? phoneDigits
+            : null;
+        const eventId = crypto.randomUUID();
+        formData.set("leadEventId", eventId);
+        // Browser primeiro; CAPI no server com o mesmo event_id (dedupe Meta).
+        await trackBrowserEvent({
+          event: "Lead",
+          eventId,
+          mirrorServer: false,
+          user: {
+            email: email || null,
+            fullName: fullName || null,
+            phone,
+          },
+          commerce: { product: "Cadastro Euzim" },
+        });
+      }
+      return action(prev, formData);
+    },
+    initial,
+  );
   const safeNext =
     nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
       ? nextPath

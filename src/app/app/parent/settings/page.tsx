@@ -11,6 +11,7 @@ import {
 import type { BillingSnapshot } from "@/components/parent/subscription-panel";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/get-user";
+import { countAcceptedFriends } from "@/lib/social/friend-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -18,11 +19,13 @@ import {
   isStripeCheckoutReady,
   stripeMissingKeys,
 } from "@/lib/stripe/config";
+import { loadSubscriptionPlans } from "@/lib/billing/plans-catalog-load";
 
 async function ParentSettingsPageInner() {
   await connection();
   const user = await getCurrentUser();
   if (!user) return null;
+  const catalogPlans = await loadSubscriptionPlans();
 
   const db = createAdminClient() ?? (await createClient());
   let profile: ProfileSnapshot = {
@@ -32,6 +35,7 @@ async function ParentSettingsPageInner() {
     cpf: "",
     storiesCount: 0,
     charactersCount: 0,
+    friendsCount: 0,
   };
   let billing: BillingSnapshot = {
     subscriptionStatus: "none",
@@ -60,6 +64,7 @@ async function ParentSettingsPageInner() {
         cpf: row.cpf || "",
         storiesCount: 0,
         charactersCount: 0,
+        friendsCount: 0,
       };
       billing = {
         ...billing,
@@ -86,6 +91,7 @@ async function ParentSettingsPageInner() {
       ]);
     profile.storiesCount = storiesCount ?? 0;
     profile.charactersCount = charactersCount ?? 0;
+    profile.friendsCount = await countAcceptedFriends(user.id);
   }
 
   return (
@@ -97,7 +103,11 @@ async function ParentSettingsPageInner() {
             Voltar
           </Link>
         </Button>
-        <ProfilePanel profile={profile} billing={billing} />
+        <ProfilePanel
+          profile={profile}
+          billing={billing}
+          plans={catalogPlans}
+        />
       </div>
     </AppShell>
   );

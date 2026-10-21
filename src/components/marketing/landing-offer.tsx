@@ -1,97 +1,98 @@
 import Link from "next/link";
-import { BookOpen, Check, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BookOpen, Check, FileText, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  FAMILY_SUBSCRIPTION,
-  PLUS_SUBSCRIPTION,
-  STARTER_SUBSCRIPTION,
-  type StoryPlan,
-} from "@/lib/billing/plans";
+import { getPlanCatalog } from "@/lib/billing/plan-catalog";
+import type { PlanCatalogRow } from "@/lib/billing/plan-catalog-shared";
+import { subscriptionPlansFromCatalog } from "@/lib/billing/plans-from-catalog";
+import type { StoryPlan } from "@/lib/billing/plans";
 import { signupPathForPlan } from "@/lib/billing/selected-plan";
 import { cn } from "@/lib/utils";
 
-const PLANS: Array<{
-  plan: StoryPlan;
-  badge: string;
-  favorite: boolean;
-  cta: string;
-  highlights: Array<{ icon: typeof Users; text: string }>;
-}> = [
-  {
-    plan: STARTER_SUBSCRIPTION,
-    badge: "Para Aventureiros",
-    favorite: false,
-    cta: "Quero começar a criar",
-    highlights: [
-      {
-        icon: Users,
-        text: `${STARTER_SUBSCRIPTION.includedCharacters} personagens (avatares)`,
-      },
-      {
-        icon: BookOpen,
-        text: `${STARTER_SUBSCRIPTION.storiesPerMonth} histórias novas todo mês`,
-      },
-      {
-        icon: Sparkles,
-        text: "Geração com IA inclusa",
-      },
-      {
-        icon: ShieldCheck,
-        text: "Extra a R$ 11,90 se precisar de mais",
-      },
-    ],
-  },
-  {
-    plan: FAMILY_SUBSCRIPTION,
-    badge: "Para Realizadores",
-    favorite: true,
-    cta: "Quero criar novos hábitos",
-    highlights: [
-      {
-        icon: Users,
-        text: `${FAMILY_SUBSCRIPTION.includedCharacters} avatares`,
-      },
-      {
-        icon: BookOpen,
-        text: `${FAMILY_SUBSCRIPTION.storiesPerMonth} histórias por mês`,
-      },
-      {
-        icon: Sparkles,
-        text: "Geração com IA inclusa",
-      },
-      {
-        icon: ShieldCheck,
-        text: "Extra a R$ 9,90 se precisar de mais",
-      },
-    ],
-  },
-  {
-    plan: PLUS_SUBSCRIPTION,
-    badge: "Para Exploradores Plus",
-    favorite: false,
-    cta: "Quero o máximo de histórias",
-    highlights: [
-      {
-        icon: Users,
-        text: `${PLUS_SUBSCRIPTION.includedCharacters} avatares`,
-      },
-      {
-        icon: BookOpen,
-        text: `${PLUS_SUBSCRIPTION.storiesPerMonth} histórias por mês`,
-      },
-      {
-        icon: Sparkles,
-        text: "Geração com IA inclusa",
-      },
-      {
-        icon: ShieldCheck,
-        text: "Extra a R$ 7,90 se precisar de mais",
-      },
-    ],
-  },
-];
+function buildCards(rows: PlanCatalogRow[]) {
+  const plans = subscriptionPlansFromCatalog(rows);
+  const byKey = new Map(rows.map((r) => [r.planKey, r]));
 
-export function LandingOffer() {
+  const meta: Array<{
+    planId: string;
+    badge: string;
+    favorite: boolean;
+    cta: string;
+  }> = [
+    {
+      planId: "starter",
+      badge: "Para Aventureiros",
+      favorite: false,
+      cta: "Quero começar a criar",
+    },
+    {
+      planId: "family",
+      badge: "Para Realizadores",
+      favorite: true,
+      cta: "Quero criar novos hábitos",
+    },
+    {
+      planId: "plus",
+      badge: "Para Exploradores Plus",
+      favorite: false,
+      cta: "Quero o máximo de histórias",
+    },
+  ];
+
+  return meta
+    .map((m) => {
+      const plan = plans.find((p) => p.planId === m.planId);
+      const row = byKey.get(m.planId as PlanCatalogRow["planKey"]);
+      if (!plan || !row) return null;
+      const description =
+        row.description.trim() ||
+        `${plan.includedCharacters} avatares e ${plan.storiesPerMonth} histórias por mês.`;
+      const highlights = [
+        {
+          icon: Users,
+          text:
+            m.planId === "starter"
+              ? `${plan.includedCharacters} personagens (avatares)`
+              : `${plan.includedCharacters} avatares`,
+        },
+        {
+          icon: BookOpen,
+          text:
+            m.planId === "starter"
+              ? `${plan.storiesPerMonth} histórias novas todo mês`
+              : `${plan.storiesPerMonth} histórias por mês`,
+        },
+        {
+          icon: Sparkles,
+          text: "Geração com IA inclusa",
+        },
+        {
+          icon: FileText,
+          text: description,
+        },
+      ];
+      return {
+        plan,
+        badge: m.badge,
+        favorite: m.favorite,
+        cta: m.cta,
+        description,
+        highlights,
+      };
+    })
+    .filter(Boolean) as Array<{
+    plan: StoryPlan;
+    badge: string;
+    favorite: boolean;
+    cta: string;
+    description: string;
+    highlights: Array<{ icon: typeof Users; text: string }>;
+  }>;
+}
+
+export async function LandingOffer() {
+  const rows = await getPlanCatalog();
+  const cards = buildCards(rows);
+
   return (
     <section
       id="oferta"
@@ -112,7 +113,7 @@ export function LandingOffer() {
         </div>
 
         <div className="landing-offer-grid">
-          {PLANS.map(({ plan, badge, favorite, cta, highlights }) => (
+          {cards.map(({ plan, badge, favorite, cta, highlights }) => (
             <article
               key={plan.planId}
               className={cn(

@@ -35,18 +35,18 @@ export function AppShellNav({
   kidsMode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const isAdmin = user.role === "admin";
 
   const links: NavLink[] = [
     { href: "/app/social", label: "Social", icon: Heart },
-    { href: "/app/parent", label: "Pais", icon: Users },
-    { href: "/app/kids", label: "Kids", icon: Baby },
+    { href: "/app/parent", label: "Criação", icon: Users },
+    { href: "/app/kids", label: "Leitura", icon: Baby },
     { href: "/app/parent/gifts", label: "Presentes", icon: Gift },
-    ...(user.role === "admin"
+    ...(isAdmin
       ? [{ href: "/app/admin", label: "Administrador", icon: Shield }]
       : []),
     {
-      href:
-        user.role === "admin" ? "/app/admin/settings" : "/app/parent/settings",
+      href: isAdmin ? "/app/admin/settings" : "/app/parent/settings",
       label: "Perfil",
       icon: UserRound,
     },
@@ -54,7 +54,7 @@ export function AppShellNav({
 
   const kidsLinks: NavLink[] = [
     { href: "/app/social?mode=kids", label: "Social", icon: Heart },
-    { href: "/app/kids", label: "Kids", icon: Baby },
+    { href: "/app/kids", label: "Leitura", icon: Baby },
   ];
 
   const navLinks = kidsMode ? kidsLinks : links;
@@ -86,7 +86,11 @@ export function AppShellNav({
                     </Link>
                   </Button>
                 ))}
-                <PinGuardButton label="Pais" href="/app/parent" />
+                <PinGuardButton
+                  label="Criação"
+                  href="/app/parent"
+                  skipPin={isAdmin}
+                />
               </>
             ) : (
               links.map(({ href, label, icon: Icon }) => (
@@ -161,7 +165,7 @@ export function AppShellNav({
                 <p className="mb-2 truncate px-2 text-xs text-muted-foreground">
                   {user.email}
                   {user.isMock ? " · mock" : ""}
-                  {user.role === "admin" ? " · admin" : ""}
+                  {isAdmin ? " · admin" : ""}
                 </p>
               ) : null}
               {navLinks.map(({ href, label, icon: Icon }) => (
@@ -179,8 +183,12 @@ export function AppShellNav({
                 </Button>
               ))}
               {kidsMode ? (
-                <div className="mt-2 px-1">
-                  <PinGuardButton label="Pais" href="/app/parent" />
+                <div className="mt-2 px-1" onClick={() => setOpen(false)}>
+                  <PinGuardButton
+                    label="Criação"
+                    href="/app/parent"
+                    skipPin={isAdmin}
+                  />
                 </div>
               ) : (
                 <form action={signOutAction} className="mt-2">

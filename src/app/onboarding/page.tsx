@@ -15,6 +15,7 @@ import { loadOnboardingBootstrap } from "@/lib/onboarding/load-reuse-state";
 import { ONBOARDING_BUILD } from "@/lib/onboarding/build";
 import { normalizeSecurityPin } from "@/lib/onboarding/pin-format";
 import { parseSelectedPlanId } from "@/lib/billing/selected-plan";
+import { loadSubscriptionPlans } from "@/lib/billing/plans-catalog-load";
 import type { OnboardingState } from "@/lib/auth/types";
 
 /** Geração Pixar no fluxo pode passar de 60s. */
@@ -45,6 +46,7 @@ async function OnboardingPageInner({
     params.resume === "1" ||
     params.resume === "generating" ||
     params.paid === "1";
+  const catalogPlans = await loadSubscriptionPlans();
 
   const cookieState = await readMockOnboarding();
   let initialState: OnboardingState | null = cookieState;
@@ -135,6 +137,7 @@ async function OnboardingPageInner({
           resetMode={resetMode}
           resumeAfterPay={resumeAfterPay}
           preferredPlan={preferredPlan}
+          catalogPlans={catalogPlans}
         />
       </div>
     </main>

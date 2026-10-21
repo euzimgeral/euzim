@@ -11,7 +11,8 @@ export function resolveAppHomePath(
   user: Pick<AuthUser, "role" | "onboardingCompleted">,
 ): string {
   if (user.role === "admin") return "/app/admin";
-  if (user.onboardingCompleted) return "/app/parent";
+  // Parent onboardado entra na Leitura (kids); Criação fica no nav.
+  if (user.onboardingCompleted) return "/app/kids";
   return "/onboarding";
 }
 
@@ -34,9 +35,9 @@ export function resolvePostAuthPath(
   }
 
   if (user.onboardingCompleted) {
-    if (next.startsWith("/onboarding")) return "/app/parent";
+    if (next.startsWith("/onboarding")) return "/app/kids";
     if (next.startsWith("/app")) return next;
-    return "/app/parent";
+    return "/app/kids";
   }
 
   // Ainda precisa onboardar: só permite next=/onboarding (com query)

@@ -6,13 +6,16 @@ import {
   EXTRA_STORY_PLUS,
   FAMILY_SUBSCRIPTION,
   customAvatarPriceCents,
-  extraStoryForPlan,
   packPriceCents,
   resolveCharacterPack,
   resolveStoryPlan,
   resolveSubscriptionPlan,
   type StoryPlan,
 } from "@/lib/billing/plans";
+import {
+  extraStoryForPlanAsync,
+  resolveSubscriptionPlanAsync,
+} from "@/lib/billing/plans-catalog-load";
 import {
   resolveStripePriceId,
   type StripePriceKey,
@@ -186,12 +189,13 @@ export async function startPlanCheckoutAction(
   planId: string,
   options: SubscriptionCheckoutOptions = {},
 ): Promise<CheckoutActionResult> {
-  const plan = resolveStoryPlan(planId);
+  const live = await resolveSubscriptionPlanAsync(planId);
+  const plan = live ?? resolveStoryPlan(planId);
   if (!plan) return { error: "Plano inválido." };
   if (plan.kind === "extra_story") {
     return startExtraStoryCheckoutAction();
   }
-  if (!resolveSubscriptionPlan(plan.planId)) {
+  if (!resolveSubscriptionPlan(plan.planId) && !live) {
     return { error: "Plano de assinatura inválido." };
   }
   return createSubscriptionCheckout(plan, options);
@@ -202,7 +206,7 @@ export async function startExtraStoryCheckoutAction(): Promise<CheckoutActionRes
   if (!user) return { error: "Faça login." };
 
   const activePlanId = await readUserSubscriptionPlanId(user.id);
-  const plan = extraStoryForPlan(activePlanId);
+  const plan = await extraStoryForPlanAsync(activePlanId);
   const priceKey = (plan.stripePriceKey || plan.planId) as StripePriceKey;
 
   const gated = gateSecret();

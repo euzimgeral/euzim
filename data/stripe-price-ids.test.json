@@ -1,0 +1,62 @@
+{
+  "generatedAt": "2026-10-21T16:42:54.273Z",
+  "source": "live",
+  "prices": {
+    "starter": "price_1UT2BfCtctjTcM4Xvt0QLgjC",
+    "family": "price_1UT2BkCtctjTcM4XQtip7Doh",
+    "plus": "price_1UT2BqCtctjTcM4Xuwt68U6y",
+    "extra_story": "price_1USMwaCtctjTcM4XwBqkps6V",
+    "extra_story_starter": "price_1USgteCtctjTcM4XlTbc7Cdg",
+    "extra_story_family": "price_1USgtgCtctjTcM4XjQEWdgTc",
+    "extra_story_plus": "price_1USgthCtctjTcM4XVrpD4boc",
+    "pack-1": "price_1USMwbCtctjTcM4Xka8V50N5",
+    "pack-2": "price_1USMwdCtctjTcM4Xcj7Vtoty",
+    "pack-3": "price_1USMweCtctjTcM4X1Rb8dTRe",
+    "pack-4": "price_1USMwgCtctjTcM4XdZ4sz6GH",
+    "pack-5": "price_1USMwiCtctjTcM4XXJGh3FR0",
+    "avatar_unit": "price_1USMwkCtctjTcM4XWn5kEsJt"
+  },
+  "products": {
+    "starter": "prod_VTJZz0s2EtoPwl",
+    "family": "prod_VTJZeUKeRvJwXq",
+    "plus": "prod_VTeBHZXUHPOeOv",
+    "extra_story": "prod_VTJZY3LlsgOer2",
+    "extra_story_starter": "prod_VTeCmIsakMJGIt",
+    "extra_story_family": "prod_VTeChqS4jUph7b",
+    "extra_story_plus": "prod_VTeCn0RADUNxGz",
+    "pack-1": "prod_VTJZ2FIvOvVQM9",
+    "pack-2": "prod_VTJZ3wPrBfcWFN",
+    "pack-3": "prod_VTJZUa5HQJOz9j",
+    "pack-4": "prod_VTJZ6Pgp7jBvs5",
+    "pack-5": "prod_VTJZsxFzoTpGbT",
+    "avatar_unit": "prod_VTJZfUoMKmChsV"
+  },
+  "liveToTestPrice": {
+    "price_1UT2Bd2RGWYUXReLGjicusHW": "price_1UT2BfCtctjTcM4Xvt0QLgjC",
+    "price_1UT2Bj2RGWYUXReLDsCdJXAo": "price_1UT2BkCtctjTcM4XQtip7Doh",
+    "price_1UT2Bo2RGWYUXReLqJ6trzyF": "price_1UT2BqCtctjTcM4Xuwt68U6y",
+    "price_1USgrg2RGWYUXReLp1XSmLBw": "price_1USgthCtctjTcM4XVrpD4boc",
+    "price_1USgre2RGWYUXReLd28gsvrS": "price_1USgteCtctjTcM4XlTbc7Cdg",
+    "price_1USgrf2RGWYUXReLV0QuV6tA": "price_1USgtgCtctjTcM4XjQEWdgTc",
+    "price_1URZD52RGWYUXReLJBO4mGh2": "price_1USMwbCtctjTcM4Xka8V50N5",
+    "price_1URZD52RGWYUXReL2BM6zjb0": "price_1USMwdCtctjTcM4Xcj7Vtoty",
+    "price_1URZD52RGWYUXReLRDVVeoOA": "price_1USMweCtctjTcM4X1Rb8dTRe",
+    "price_1URZD62RGWYUXReLJy3Dl9LJ": "price_1USMwgCtctjTcM4XdZ4sz6GH",
+    "price_1URZD62RGWYUXReLxApF8ILx": "price_1USMwiCtctjTcM4XXJGh3FR0",
+    "price_1URZD62RGWYUXReLiZ2MHkJ9": "price_1USMwkCtctjTcM4XWn5kEsJt"
+  },
+  "liveToTestProduct": {
+    "prod_VSUBri2FlAVcly": "prod_VTJZz0s2EtoPwl",
+    "prod_VSUBYLdM2LhWTn": "prod_VTJZeUKeRvJwXq",
+    "prod_VTe94QxabUnvqm": "prod_VTeBHZXUHPOeOv",
+    "prod_VTeAFXUOEYFagg": "prod_VTeCn0RADUNxGz",
+    "prod_VTe9hZdUmvFxmp": "prod_VTeCmIsakMJGIt",
+    "prod_VTe9G2VIhTvQan": "prod_VTeChqS4jUph7b",
+    "prod_VSUBNWkjUvC2u9": "prod_VTJZ2FIvOvVQM9",
+    "prod_VSUBjZNwxKsFMs": "prod_VTJZ3wPrBfcWFN",
+    "prod_VSUBtE4tfSzI8b": "prod_VTJZUa5HQJOz9j",
+    "prod_VSUBlwMeR8fPaM": "prod_VTJZ6Pgp7jBvs5",
+    "prod_VSUB5EMXIM0ijm": "prod_VTJZsxFzoTpGbT",
+    "prod_VSUBrCXBKf2ite": "prod_VTJZfUoMKmChsV"
+  }
+}

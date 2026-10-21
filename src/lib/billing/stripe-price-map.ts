@@ -10,9 +10,13 @@ export type StripePriceMapFile = {
   liveToTestProduct: Record<string, string>;
 };
 
+/**
+ * Fora de `src/` — escrita no boot (instrumentation) NÃO dispara Turbopack/HMR.
+ * Cópia legada em src/lib/billing/stripe-price-ids.test.json pode existir; esta é a canônica.
+ */
 export const STRIPE_TEST_PRICE_MAP_PATH = resolve(
   process.cwd(),
-  "src/lib/billing/stripe-price-ids.test.json",
+  "data/stripe-price-ids.test.json",
 );
 
 export function emptyStripePriceMap(): StripePriceMapFile {

@@ -24,6 +24,8 @@ async function postWithRetry(
         method: "POST",
         headers,
         body: JSON.stringify(body),
+        // Evita bloquear signup/onboard (await CAPI) se o destino do webhook travar.
+        signal: AbortSignal.timeout(4000),
       });
       lastStatus = res.status;
       if (res.ok) return { ok: true, status: res.status };

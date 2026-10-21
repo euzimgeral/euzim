@@ -10,6 +10,10 @@ import {
   type ReferralRewardRow,
 } from "@/lib/referral/rewards";
 import type { GiftOptionId } from "@/lib/referral/constants";
+import {
+  getReferralPointsBalance,
+  redeemReferralPoints,
+} from "@/lib/referral/points";
 
 async function absoluteOrigin(): Promise<string> {
   try {
@@ -73,4 +77,32 @@ export async function claimGiftAction(
   revalidatePath("/app/parent/gifts");
   revalidatePath("/app/parent/settings");
   return { success: true };
+}
+
+export async function getMyReferralPointsAction(): Promise<{
+  error?: string;
+  points?: number;
+}> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Faça login." };
+  const points = await getReferralPointsBalance(user.id);
+  return { points };
+}
+
+export async function redeemReferralPointsAction(input: {
+  stories: number;
+  avatars: number;
+}): Promise<{ error?: string; success?: boolean; balance?: number }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Faça login." };
+  const result = await redeemReferralPoints({
+    userId: user.id,
+    stories: input.stories,
+    avatars: input.avatars,
+  });
+  if (!result.ok) return { error: result.error, balance: result.balance };
+  revalidatePath("/app/parent");
+  revalidatePath("/app/parent/gifts");
+  revalidatePath("/app/parent/settings");
+  return { success: true, balance: result.balance };
 }

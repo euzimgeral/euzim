@@ -75,6 +75,7 @@ export async function sendGa4MeasurementProtocol(
               },
             ],
           }),
+          signal: AbortSignal.timeout(5000),
         });
       } catch {
         /* ignore MP failures */

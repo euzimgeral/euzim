@@ -160,6 +160,6 @@ for (const [key, ids] of Object.entries(LIVE)) {
   console.log(JSON.stringify({ key, testProduct: testProduct.id, testPrice: testPrice.id }));
 }
 
-const out = resolve(process.cwd(), "src/lib/billing/stripe-price-ids.test.json");
+const out = resolve(process.cwd(), "data/stripe-price-ids.test.json");
 writeFileSync(out, `${JSON.stringify(map, null, 2)}\n`, "utf8");
 console.log("WROTE", out, "mapped", Object.keys(map.prices).length);

@@ -1,9 +1,16 @@
 /**
  * Boot hook — em :5050 (modo test) espelha catálogo Stripe live → test.
- * Não muta produtos live.
+ * Não muta produtos live. Map grava em data/ (fora de src) para não HMR-loop.
  */
+declare global {
+  // eslint-disable-next-line no-var
+  var __euzimStripeBootSynced: boolean | undefined;
+}
+
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (globalThis.__euzimStripeBootSynced) return;
+  globalThis.__euzimStripeBootSynced = true;
 
   // DNS ipv4first vem de NODE_OPTIONS no npm run dev/start (AAAA supabase ETIMEOUT).
 

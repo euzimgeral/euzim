@@ -5,6 +5,7 @@ import {
   loadTrackingWebhooks,
 } from "@/lib/tracking/load-config";
 import { sendMetaCapi } from "@/lib/tracking/meta-capi";
+import { trackingRequestContext } from "@/lib/tracking/request-context";
 import { dispatchOutboundWebhooks } from "@/lib/tracking/webhooks";
 import type { TrackingEventInput } from "@/lib/tracking/types";
 
@@ -22,11 +23,17 @@ export async function dispatchTrackingEvent(
   const eventId = input.eventId || newEventId();
   const cookieAttr = await readAttributionCookie();
   const attribution = mergeAttribution(cookieAttr, input.attribution || {});
+  const ctx = await trackingRequestContext(
+    attribution.landing_path || "/",
+  );
 
   const enriched: TrackingEventInput = {
     ...input,
     eventId,
     attribution,
+    clientIp: input.clientIp ?? ctx.clientIp,
+    userAgent: input.userAgent ?? ctx.userAgent,
+    eventSourceUrl: input.eventSourceUrl || ctx.eventSourceUrl,
   };
 
   const [pixels, webhooks] = await Promise.all([
@@ -43,7 +50,10 @@ export async function dispatchTrackingEvent(
   return { eventId, ok: capi.ok };
 }
 
-/** Disparo fire-and-forget (signup / onboard / stripe) sem bloquear UX. */
+/**
+ * Fire-and-forget — NÃO usar antes de redirect()/resposta que aborta o request.
+ * Preferir `await dispatchTrackingEvent` em signup / onboard.
+ */
 export function fireTrackingEvent(input: TrackingEventInput): void {
   void dispatchTrackingEvent(input).catch(() => {
     /* never throw to callers */

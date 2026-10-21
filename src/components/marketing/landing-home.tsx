@@ -16,8 +16,11 @@ import {
   IconOvercomeFears,
 } from "@/components/marketing/purpose-icons";
 import { Button } from "@/components/ui/button";
-import { formatBrl } from "@/lib/billing/character-packs";
-import { STARTER_SUBSCRIPTION } from "@/lib/billing/plans";
+import { getPlanCatalog } from "@/lib/billing/plan-catalog";
+import {
+  cheapestPlanFromCatalog,
+  formatCentsBrl,
+} from "@/lib/billing/plan-catalog-shared";
 import type { ComponentType, ReactNode } from "react";
 
 const PURPOSES: {
@@ -48,8 +51,14 @@ const PURPOSES: {
   },
 ];
 
-export function LandingHome({ mockMode = false }: { mockMode?: boolean }) {
-  const priceLabel = formatBrl(STARTER_SUBSCRIPTION.priceBrl);
+export async function LandingHome({
+  mockMode = false,
+}: {
+  mockMode?: boolean;
+}) {
+  const catalog = await getPlanCatalog();
+  const cheapest = cheapestPlanFromCatalog(catalog);
+  const priceLabel = formatCentsBrl(cheapest.priceCents);
 
   return (
     <div className="landing-root relative flex min-h-full flex-1 flex-col">
@@ -168,7 +177,7 @@ export function LandingHome({ mockMode = false }: { mockMode?: boolean }) {
 
       <LandingStoryBook />
 
-      <LandingRoadmap />
+      <LandingRoadmap entryPriceLabel={priceLabel} />
 
       <LandingOffer />
 

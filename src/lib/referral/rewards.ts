@@ -4,6 +4,7 @@ import {
   type GiftOption,
   type GiftOptionId,
 } from "@/lib/referral/constants";
+import { creditReferralPointsOnFirstSubscription } from "@/lib/referral/points";
 
 export type ReferralRewardRow = {
   id: string;
@@ -17,93 +18,14 @@ export type ReferralRewardRow = {
 };
 
 /**
- * Após 1ª assinatura paga do indicado: cria reward pending_choice
- * para o indicador (idempotente por referee_id).
+ * Após 1ª assinatura paga do indicado: credita pontos ao indicador
+ * (1pt=história / 2pt=avatar). Mantém claim legado para rewards pending.
  */
 export async function grantReferralRewardOnFirstSubscription(input: {
   refereeId: string;
   planId: string;
 }): Promise<{ ok: boolean; created?: boolean; error?: string }> {
-  const admin = createAdminClient();
-  if (!admin) return { ok: false, error: "Admin indisponível." };
-
-  const options = giftOptionsForPlan(input.planId);
-  if (options.length === 0) {
-    return { ok: false, error: "Plano sem opções de presente." };
-  }
-
-  const { data: referee } = await admin
-    .from("users")
-    .select("id, referred_by, referral_rewarded_at, full_name, email")
-    .eq("id", input.refereeId)
-    .maybeSingle();
-
-  if (!referee) return { ok: false, error: "Indicado não encontrado." };
-  if (!referee.referred_by) {
-    return { ok: true, created: false };
-  }
-  if (referee.referral_rewarded_at) {
-    return { ok: true, created: false };
-  }
-
-  const referrerId = referee.referred_by as string;
-
-  const { data: existing } = await admin
-    .from("referral_rewards")
-    .select("id")
-    .eq("referee_id", input.refereeId)
-    .maybeSingle();
-
-  if (existing) {
-    // Já existe — marca rewarded se ainda não
-    await admin
-      .from("users")
-      .update({ referral_rewarded_at: new Date().toISOString() })
-      .eq("id", input.refereeId)
-      .is("referral_rewarded_at", null);
-    return { ok: true, created: false };
-  }
-
-  const { data: reward, error: insertError } = await admin
-    .from("referral_rewards")
-    .insert({
-      referrer_id: referrerId,
-      referee_id: input.refereeId,
-      plan_id: input.planId,
-      status: "pending_choice",
-      options,
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (insertError) {
-    // Unique race — treat as ok
-    if (insertError.message.toLowerCase().includes("unique")) {
-      return { ok: true, created: false };
-    }
-    return { ok: false, error: insertError.message };
-  }
-
-  await admin
-    .from("users")
-    .update({ referral_rewarded_at: new Date().toISOString() })
-    .eq("id", input.refereeId);
-
-  const refereeLabel =
-    (typeof referee.full_name === "string" && referee.full_name.trim()) ||
-    (typeof referee.email === "string" ? referee.email.split("@")[0] : null) ||
-    "alguém";
-
-  await admin.from("notifications").insert({
-    user_id: referrerId,
-    kind: "referral_gift_pending",
-    title: "Você ganhou um presente!",
-    body: `${refereeLabel} assinou pelo seu link. Escolha seu presente.`,
-    href: "/app/parent/gifts",
-    payload: { reward_id: reward?.id, referee_id: input.refereeId },
-  });
-
-  return { ok: true, created: true };
+  return creditReferralPointsOnFirstSubscription(input);
 }
 
 export async function listPendingRewardsForUser(

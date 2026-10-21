@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, UsersRound, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, UsersRound, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MagicalLoading } from "@/components/ui/magical-loading";
 import {
   LANGUAGE_LEVEL_LABELS,
@@ -56,16 +64,152 @@ type FriendOption = {
   label: string;
   authorAvatarUrl: string | null;
   characters: CharacterOption[];
+  email?: string | null;
 };
 
 type ClarifyQ = { id: string; prompt: string };
 
-type Step =
-  | "theme"
-  | "pick-friend"
-  | "options"
-  | "clarify"
-  | "generating";
+type Step = "theme" | "options" | "clarify" | "generating";
+type FriendsModalStep = "chars" | "search";
+
+function CharacterPicker({
+  list,
+  selectedIds,
+  protagonistId,
+  disabled,
+  onToggle,
+  onProtagonist,
+  showSource = false,
+}: {
+  list: CharacterOption[];
+  selectedIds: Set<string>;
+  protagonistId: string;
+  disabled?: boolean;
+  onToggle: (id: string) => void;
+  onProtagonist: (id: string) => void;
+  showSource?: boolean;
+}) {
+  if (list.length === 0) return null;
+  return (
+    <ul className="space-y-2">
+      {list.map((c) => (
+        <li
+          key={c.id}
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 px-3 py-2"
+        >
+          <label className="flex flex-1 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={selectedIds.has(c.id)}
+              disabled={disabled}
+              onChange={() => onToggle(c.id)}
+            />
+            {c.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.avatarUrl}
+                alt=""
+                className="size-8 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="size-8 rounded-lg bg-muted" />
+            )}
+            <span className="font-medium">{c.name}</span>
+            {c.isPrimary ? (
+              <span className="text-[10px] uppercase text-muted-foreground">
+                primário
+              </span>
+            ) : null}
+            {showSource && c.source === "friend" ? (
+              <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] uppercase text-sky-800">
+                amigo
+              </span>
+            ) : null}
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <input
+              type="radio"
+              name="protagonist"
+              checked={protagonistId === c.id}
+              disabled={disabled || !selectedIds.has(c.id)}
+              onChange={() => onProtagonist(c.id)}
+            />
+            Protagonista
+          </label>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CastSummary({
+  characters,
+  selectedIds,
+}: {
+  characters: CharacterOption[];
+  selectedIds: Set<string>;
+}) {
+  const own = characters.filter(
+    (c) => selectedIds.has(c.id) && c.source !== "friend",
+  );
+  const friends = characters.filter(
+    (c) => selectedIds.has(c.id) && c.source === "friend",
+  );
+  return (
+    <div className="space-y-2 rounded-xl border border-border/70 p-3">
+      <p className="text-sm font-medium">Elenco</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {own.map((c) =>
+          c.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={c.id}
+              src={c.avatarUrl}
+              alt={c.name}
+              title={c.name}
+              className="size-10 rounded-full object-cover ring-2 ring-background"
+            />
+          ) : (
+            <div
+              key={c.id}
+              title={c.name}
+              className="flex size-10 items-center justify-center rounded-full bg-muted text-[10px]"
+            >
+              {c.name.slice(0, 1)}
+            </div>
+          ),
+        )}
+        {friends.length > 0 ? (
+          <>
+            <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900">
+              Com colaboração
+            </span>
+            {friends.map((c) =>
+              c.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={c.id}
+                  src={c.avatarUrl}
+                  alt={c.name}
+                  title={c.name}
+                  className="size-10 rounded-full object-cover ring-2 ring-sky-200"
+                />
+              ) : (
+                <div
+                  key={c.id}
+                  title={c.name}
+                  className="flex size-10 items-center justify-center rounded-full bg-sky-50 text-[10px] text-sky-900"
+                >
+                  {c.name.slice(0, 1)}
+                </div>
+              ),
+            )}
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export function NewStoryForm({
   childName,
@@ -103,9 +247,17 @@ export function NewStoryForm({
 
   const [withFriends, setWithFriends] = useState(false);
   const [friends, setFriends] = useState<FriendOption[]>([]);
+  const [friendQuery, setFriendQuery] = useState("");
   const [friendParentId, setFriendParentId] = useState<string | null>(null);
   const [displayCharacters, setDisplayCharacters] =
     useState<CharacterOption[]>(characters);
+
+  const [friendsOpen, setFriendsOpen] = useState(false);
+  const [friendsModalStep, setFriendsModalStep] =
+    useState<FriendsModalStep>("chars");
+  const [modalSelectedIds, setModalSelectedIds] = useState<Set<string>>(
+    () => new Set(characters.map((c) => c.id).slice(0, MAX_CAST)),
+  );
 
   const defaultSelected = useMemo(
     () => new Set(characters.map((c) => c.id).slice(0, MAX_CAST)),
@@ -125,6 +277,16 @@ export function NewStoryForm({
     if (nextPrimary) setProtagonistId(nextPrimary);
   }, [characters, withFriends]);
 
+  const filteredFriends = useMemo(() => {
+    const q = friendQuery.trim().toLowerCase();
+    if (!q) return friends;
+    return friends.filter((f) => {
+      const label = (f.label || "").toLowerCase();
+      const email = (f.email || "").toLowerCase();
+      return label.includes(q) || email.includes(q);
+    });
+  }, [friends, friendQuery]);
+
   function applyCombinedCast(list: CharacterOption[], keepFriendId: string) {
     setWithFriends(true);
     setFriendParentId(keepFriendId);
@@ -137,9 +299,17 @@ export function NewStoryForm({
     const friendPrimary =
       list.find((c) => c.source === "friend" && c.isPrimary)?.id ??
       list.find((c) => c.source === "friend")?.id;
-    const initial = [ownPrimary, friendPrimary].filter(Boolean) as string[];
+    const ownPicked = list
+      .filter((c) => c.source !== "friend" && modalSelectedIds.has(c.id))
+      .map((c) => c.id);
+    const initial = [
+      ...(ownPicked.length ? ownPicked : [ownPrimary]),
+      friendPrimary,
+    ].filter(Boolean) as string[];
     const unique = [...new Set(initial)].slice(0, MAX_CAST);
-    setSelectedIds(new Set(unique.length > 0 ? unique : list.slice(0, 1).map((c) => c.id)));
+    setSelectedIds(
+      new Set(unique.length > 0 ? unique : list.slice(0, 1).map((c) => c.id)),
+    );
     if (ownPrimary) setProtagonistId(ownPrimary);
   }
 
@@ -193,7 +363,6 @@ export function NewStoryForm({
     });
   }
 
-  // Poll do job enfileirado — limpa MagicalLoading em ready|failed.
   useEffect(() => {
     if (!activeJobId || step !== "generating") return;
     let cancelled = false;
@@ -222,7 +391,6 @@ export function NewStoryForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJobId, step]);
 
-  // Notifier global também libera o formulário (toast failed/ready).
   useEffect(() => {
     function onTerminal(e: Event) {
       const job = (e as CustomEvent<JobPoll>).detail;
@@ -253,10 +421,28 @@ export function NewStoryForm({
     });
   }
 
+  function toggleModalCharacter(id: string) {
+    setModalSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size <= 1) return prev;
+        next.delete(id);
+      } else {
+        if (next.size >= MAX_CAST) return prev;
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   function goOptions() {
     setError(null);
     if (!theme.trim()) {
       setError("Escreva o tema da história.");
+      return;
+    }
+    if (selectedIds.size === 0) {
+      setError("Selecione pelo menos um personagem.");
       return;
     }
     setWithFriends(false);
@@ -265,12 +451,31 @@ export function NewStoryForm({
     setStep("options");
   }
 
-  async function startWithFriends() {
+  function openFriendsModal() {
     setError(null);
     if (!theme.trim()) {
       setError("Escreva o tema da história.");
       return;
     }
+    const ownSelected = Array.from(selectedIds)
+      .filter((id) => characters.some((c) => c.id === id))
+      .slice(0, MAX_CAST);
+    setModalSelectedIds(
+      new Set(
+        ownSelected.length > 0
+          ? ownSelected
+          : characters[0]
+            ? [characters[0].id]
+            : [],
+      ),
+    );
+    setFriendsModalStep("chars");
+    setFriendQuery("");
+    setFriendsOpen(true);
+  }
+
+  async function loadFriendsForSearch() {
+    setError(null);
     startTransition(async () => {
       try {
         setStatus("Carregando amigos…");
@@ -295,12 +500,7 @@ export function NewStoryForm({
           );
           return;
         }
-        if (list.length === 1) {
-          const only = list[0]!;
-          await selectFriend(only.userId);
-          return;
-        }
-        setStep("pick-friend");
+        setFriendsModalStep("search");
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Falha ao carregar amigos.",
@@ -338,6 +538,7 @@ export function NewStoryForm({
         }
         applyCombinedCast(list, friendId);
         setStatus(null);
+        setFriendsOpen(false);
         setStep("options");
       } catch (err) {
         setError(
@@ -393,7 +594,6 @@ export function NewStoryForm({
           setStatus(null);
           return;
         }
-        // Sem perguntas — gera direto
         setClarifyQs([]);
         setStatus(null);
         generateStory();
@@ -511,6 +711,25 @@ export function NewStoryForm({
               ))}
             </div>
 
+            {characters.length > 0 ? (
+              <div className="space-y-2">
+                <Label>
+                  Personagens da conta{" "}
+                  <span className="font-normal text-muted-foreground">
+                    ({selectedIds.size}/{MAX_CAST})
+                  </span>
+                </Label>
+                <CharacterPicker
+                  list={characters}
+                  selectedIds={selectedIds}
+                  protagonistId={protagonistId}
+                  disabled={disabled || pending}
+                  onToggle={toggleCharacter}
+                  onProtagonist={setProtagonistId}
+                />
+              </div>
+            ) : null}
+
             <Button
               type="button"
               size="lg"
@@ -527,7 +746,7 @@ export function NewStoryForm({
               variant="outline"
               className="w-full gap-2"
               disabled={disabled || pending}
-              onClick={() => void startWithFriends()}
+              onClick={openFriendsModal}
             >
               <UsersRound className="size-4" />
               Criar história com amigos
@@ -535,110 +754,18 @@ export function NewStoryForm({
           </>
         ) : null}
 
-        {step === "pick-friend" ? (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Escolha o amigo cujo elenco entra na história (máx. {MAX_CAST}{" "}
-              avatares no total).
-            </p>
-            <ul className="space-y-2">
-              {friends.map((f) => (
-                <li key={f.userId}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl border border-border/70 px-3 py-3 text-left transition hover:border-foreground/40"
-                    disabled={pending}
-                    onClick={() => void selectFriend(f.userId)}
-                  >
-                    {f.authorAvatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={f.authorAvatarUrl}
-                        alt=""
-                        className="size-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="size-12 rounded-full bg-muted" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{f.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {f.characters.length} personagem(ns)
-                      </p>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep("theme")}
-              disabled={pending}
-            >
-              <ChevronLeft className="size-4" />
-              Voltar
-            </Button>
-          </>
-        ) : null}
-
         {step === "options" ? (
           <>
-            {displayCharacters.length > 0 ? (
-              <div className="space-y-2">
-                <Label>
-                  Personagens na história{" "}
-                  <span className="font-normal text-muted-foreground">
-                    ({selectedIds.size}/{MAX_CAST}
-                    {withFriends ? " · com amigos" : ""})
-                  </span>
-                </Label>
-                <ul className="space-y-2">
-                  {displayCharacters.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 px-3 py-2"
-                    >
-                      <label className="flex flex-1 items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(c.id)}
-                          onChange={() => toggleCharacter(c.id)}
-                        />
-                        {c.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={c.avatarUrl}
-                            alt=""
-                            className="size-8 rounded-lg object-cover"
-                          />
-                        ) : null}
-                        <span className="font-medium">{c.name}</span>
-                        {c.isPrimary ? (
-                          <span className="text-[10px] uppercase text-muted-foreground">
-                            primário
-                          </span>
-                        ) : null}
-                        {c.source === "friend" ? (
-                          <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] uppercase text-sky-800">
-                            amigo
-                          </span>
-                        ) : null}
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <input
-                          type="radio"
-                          name="protagonist"
-                          checked={protagonistId === c.id}
-                          disabled={!selectedIds.has(c.id)}
-                          onChange={() => setProtagonistId(c.id)}
-                        />
-                        Protagonista
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {withFriends ? (
+              <CastSummary
+                characters={displayCharacters}
+                selectedIds={selectedIds}
+              />
+            ) : displayCharacters.length > 0 ? (
+              <CastSummary
+                characters={displayCharacters}
+                selectedIds={selectedIds}
+              />
             ) : null}
 
             <div className="space-y-2">
@@ -723,10 +850,6 @@ export function NewStoryForm({
                 placeholder='Ex.: "parquinho de areia do condomínio", "quarto da Serena", "fazenda da vovó"'
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none ring-amber-600/30 placeholder:text-muted-foreground focus:ring-2"
               />
-              <p className="text-xs text-muted-foreground">
-                Se preencher, a história acontece nesse lugar. Se deixar em
-                branco, a IA escolhe o melhor ambiente para o tema.
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -755,21 +878,13 @@ export function NewStoryForm({
                   Não
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Se sim, valores como amor ao próximo e perdão entram no enredo —
-                sem citação bíblica.
-              </p>
             </div>
 
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  setStep(
-                    withFriends && friends.length > 1 ? "pick-friend" : "theme",
-                  )
-                }
+                onClick={() => setStep("theme")}
                 disabled={pending}
               >
                 <ChevronLeft className="size-4" />
@@ -852,26 +967,15 @@ export function NewStoryForm({
           />
         ) : null}
 
-        {error && step !== "generating" ? (
-          <div className="space-y-2" role="alert">
-            <p className="text-sm text-destructive">{error}</p>
-            {theme.trim() ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                disabled={pending || disabled}
-                onClick={() => {
-                  setError(null);
-                  generateStory();
-                }}
-              >
-                <Wand2 className="size-4" />
-                Tentar de novo
-              </Button>
-            ) : null}
-          </div>
+        {error && step !== "generating" && step !== "theme" ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {error && step === "theme" ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
         ) : null}
         {status && step !== "generating" ? (
           <p className="text-sm text-amber-800" role="status">
@@ -879,6 +983,119 @@ export function NewStoryForm({
           </p>
         ) : null}
       </CardContent>
+
+      <Dialog open={friendsOpen} onOpenChange={setFriendsOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {friendsModalStep === "chars"
+                ? "Personagens da conta"
+                : "Buscar amigos"}
+            </DialogTitle>
+            <DialogDescription>
+              {friendsModalStep === "chars"
+                ? "Escolha quem da sua conta entra na história."
+                : "Busque por nome ou e-mail e escolha um amigo para colaborar."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {friendsModalStep === "chars" ? (
+            <div className="space-y-3 py-1">
+              <CharacterPicker
+                list={characters}
+                selectedIds={modalSelectedIds}
+                protagonistId={
+                  modalSelectedIds.has(protagonistId)
+                    ? protagonistId
+                    : Array.from(modalSelectedIds)[0] ?? ""
+                }
+                disabled={pending}
+                onToggle={toggleModalCharacter}
+                onProtagonist={setProtagonistId}
+              />
+            </div>
+          ) : (
+            <div className="space-y-3 py-1">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Nome ou e-mail do amigo"
+                  value={friendQuery}
+                  onChange={(e) => setFriendQuery(e.target.value)}
+                />
+              </div>
+              <ul className="max-h-64 space-y-2 overflow-y-auto">
+                {filteredFriends.map((f) => (
+                  <li key={f.userId}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 rounded-xl border border-border/70 px-3 py-3 text-left transition hover:border-foreground/40"
+                      disabled={pending}
+                      onClick={() => void selectFriend(f.userId)}
+                    >
+                      {f.authorAvatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={f.authorAvatarUrl}
+                          alt=""
+                          className="size-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="size-12 rounded-full bg-muted" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{f.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {f.characters.length} personagem(ns)
+                          {f.email ? ` · ${f.email}` : ""}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {filteredFriends.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum amigo encontrado com essa busca.
+                </p>
+              ) : null}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            {friendsModalStep === "search" ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFriendsModalStep("chars")}
+                disabled={pending}
+              >
+                <ChevronLeft className="size-4" />
+                Voltar
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFriendsOpen(false)}
+              >
+                Cancelar
+              </Button>
+            )}
+            {friendsModalStep === "chars" ? (
+              <Button
+                type="button"
+                disabled={pending || modalSelectedIds.size === 0}
+                onClick={() => void loadFriendsForSearch()}
+              >
+                Continuar
+                <ChevronRight className="size-4" />
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

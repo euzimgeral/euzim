@@ -29,6 +29,9 @@ type StoryListRow = {
   visibility?: string | null;
   is_public?: boolean | null;
   status?: string | null;
+  view_count?: number | null;
+  like_count?: number | null;
+  generation_meta?: Record<string, unknown> | null;
 };
 
 function mapVisibility(
@@ -152,6 +155,9 @@ export async function listStoriesForParent(parentId: string): Promise<
     wallpaperImageUrl?: string | null;
     createdAt?: string;
     visibility?: "private" | "friends" | "public";
+    viewCount?: number;
+    likeCount?: number;
+    hasCollaborators?: boolean;
   }[]
 > {
   const admin = createAdminClient();
@@ -161,7 +167,7 @@ export async function listStoriesForParent(parentId: string): Promise<
   if (db) {
     try {
       const fullSelect =
-        "id, title, cover_image_url, created_at, visibility, is_public, status";
+        "id, title, cover_image_url, created_at, visibility, is_public, status, view_count, like_count, generation_meta";
       const baseSelect = "id, title, cover_image_url, created_at, status";
 
       type ListQueryResult = {
@@ -216,14 +222,31 @@ export async function listStoriesForParent(parentId: string): Promise<
             wallpaperByStory.set(row.story_id, row.image_url);
           }
         }
-        return visible.map((s) => ({
-          id: s.id,
-          title: s.title,
-          coverImageUrl: s.cover_image_url,
-          wallpaperImageUrl: wallpaperByStory.get(s.id) ?? s.cover_image_url,
-          createdAt: s.created_at,
-          visibility: mapVisibility(s),
-        }));
+        return visible.map((s) => {
+          const meta = (s.generation_meta ?? {}) as {
+            friendParentId?: string | null;
+            collaboratorParentIds?: string[] | null;
+          };
+          const hasCollaborators = Boolean(
+            (meta.friendParentId && meta.friendParentId !== parentId) ||
+              (meta.collaboratorParentIds ?? []).some(
+                (id) => id && id !== parentId,
+              ),
+          );
+          return {
+            id: s.id,
+            title: s.title,
+            coverImageUrl: s.cover_image_url,
+            wallpaperImageUrl: wallpaperByStory.get(s.id) ?? s.cover_image_url,
+            createdAt: s.created_at,
+            visibility: mapVisibility(s),
+            viewCount:
+              typeof s.view_count === "number" ? s.view_count : 0,
+            likeCount:
+              typeof s.like_count === "number" ? s.like_count : 0,
+            hasCollaborators,
+          };
+        });
       }
 
       if (result.error) {

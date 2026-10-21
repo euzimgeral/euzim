@@ -295,7 +295,7 @@ export function CharactersPanel({
                     onClick={() => openStudy(c)}
                     className="relative shrink-0 overflow-hidden rounded-xl ring-offset-background transition hover:ring-2 hover:ring-amber-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Ver poses de ${c.name}`}
-                    title="Ver poses do avatar"
+                    title="Toque e veja o avatar"
                   >
                     {c.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -312,24 +312,23 @@ export function CharactersPanel({
                     )}
                   </button>
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{c.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {c.relationship || (c.isPrimary ? "filho(a)" : "elenco")}
-                      {c.kind ? ` · ${c.kind}` : ""}
-                      {" · toque na foto"}
+                      Toque e veja o avatar
                     </p>
+                    <p className="truncate font-medium">{c.name}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {c.isPrimary ? <Badge>principal</Badge> : null}
                   <Button
                     type="button"
-                    size="sm"
+                    size="icon"
                     variant="outline"
+                    className="size-8"
+                    aria-label={`Editar ${c.name}`}
                     onClick={() => openEdit(c)}
                   >
                     <Pencil className="size-3.5" />
-                    Editar Informações
                   </Button>
                 </div>
               </li>

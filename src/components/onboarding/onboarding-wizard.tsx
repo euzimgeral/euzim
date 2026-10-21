@@ -51,9 +51,11 @@ import {
 } from "@/lib/onboarding/child-profile";
 import { isPixarGeneratedUrl } from "@/lib/onboarding/pixar-url";
 import { MagicalLoading } from "@/components/ui/magical-loading";
+import { trackBrowserEvent } from "@/lib/tracking/client-browser";
 import type { OnboardingState } from "@/lib/auth/types";
 import {
   SUBSCRIPTION_PLANS,
+  type StoryPlan,
 } from "@/lib/billing/plans";
 import {
   parseSelectedPlanId,
@@ -157,6 +159,7 @@ export function OnboardingWizard({
   resetMode = null,
   resumeAfterPay = false,
   preferredPlan = null,
+  catalogPlans = SUBSCRIPTION_PLANS,
 }: {
   initialState: OnboardingState | null;
   mockMode: boolean;
@@ -165,6 +168,8 @@ export function OnboardingWizard({
   resumeAfterPay?: boolean;
   /** Plano pré-escolhido na oferta da landing → checkout direto. */
   preferredPlan?: SelectedPlanId | null;
+  /** Catálogo vivo (Admin Planos); fallback = defaults sync. */
+  catalogPlans?: StoryPlan[];
 }) {
   const isReuse = resetMode === "reuse";
   const [step, setStep] = useState<Step>(() =>
@@ -459,10 +464,17 @@ export function OnboardingWizard({
     const confirmPin = String(new FormData(form).get("confirmPin") ?? "").trim();
     startTransition(async () => {
       try {
+        const registrationEventId = crypto.randomUUID();
+        await trackBrowserEvent({
+          event: "CompleteRegistration",
+          eventId: registrationEventId,
+          mirrorServer: false,
+          commerce: { product: "Onboarding Euzim" },
+        });
         const res = await fetch("/api/onboarding/complete-pin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pin, confirmPin }),
+          body: JSON.stringify({ pin, confirmPin, registrationEventId }),
         });
         const body = (await res.json()) as {
           error?: string;
@@ -1066,7 +1078,7 @@ export function OnboardingWizard({
             <CardDescription>
               {lockedPlan
                 ? `Suas fotos já estão salvas. Vamos direto para o checkout de ${
-                    SUBSCRIPTION_PLANS.find((p) => p.planId === lockedPlan)
+                    catalogPlans.find((p) => p.planId === lockedPlan)
                       ?.name ?? lockedPlan
                   }.`
                 : "Suas fotos já estão salvas. Assine para liberar a geração dos avatares Pixar."}
@@ -1083,7 +1095,7 @@ export function OnboardingWizard({
               />
             ) : (
               <div className="grid gap-3 md:grid-cols-3">
-                {SUBSCRIPTION_PLANS.map((plan) => (
+                {catalogPlans.map((plan) => (
                   <button
                     key={plan.planId}
                     type="button"

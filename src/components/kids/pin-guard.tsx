@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,14 @@ import {
 import { verifyParentPinAction } from "@/lib/auth/pin-actions";
 
 export function PinGuardButton({
-  label = "Área dos pais",
+  label = "Criação",
   href = "/app/parent",
+  skipPin = false,
 }: {
   label?: string;
   href?: string;
+  /** Admin troca Criação/Leitura/Social sem PIN. */
+  skipPin?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -43,6 +47,17 @@ export function PinGuardButton({
     });
   }
 
+  if (skipPin) {
+    return (
+      <Button asChild variant="outline" className="gap-2">
+        <Link href={href}>
+          <Lock className="size-4" />
+          {label}
+        </Link>
+      </Button>
+    );
+  }
+
   return (
     <>
       <Button
@@ -62,7 +77,7 @@ export function PinGuardButton({
           <DialogHeader>
             <DialogTitle>PIN de segurança</DialogTitle>
             <DialogDescription>
-              Digite o PIN dos pais para sair da área kids.
+              Digite o PIN dos pais para sair da área de Leitura.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">

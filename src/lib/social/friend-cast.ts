@@ -19,6 +19,7 @@ export type AcceptedFriendCast = {
   userId: string;
   label: string;
   authorAvatarUrl: string | null;
+  email?: string | null;
   characters: FriendCastCharacter[];
 };
 
@@ -113,6 +114,19 @@ export async function listAcceptedFriendsWithCharacters(
   if (!db) return [];
 
   const authors = await loadPrimaryAuthors(db, friendIds);
+  const { data: userRows } = await db
+    .from("users")
+    .select("id, email, full_name, display_name")
+    .in("id", friendIds);
+  const emailById = new Map(
+    (userRows ?? []).map((u) => [u.id, u.email as string | null]),
+  );
+  const nameById = new Map(
+    (userRows ?? []).map((u) => [
+      u.id,
+      (u.full_name || u.display_name || null) as string | null,
+    ]),
+  );
   const sourceByParent = new Map(
     friendIds.map((id) => [id, "friend" as const]),
   );
@@ -126,10 +140,12 @@ export async function listAcceptedFriendsWithCharacters(
 
   return friendIds.map((id) => {
     const author = authors.get(id) ?? { name: "Amigo", avatarUrl: null };
+    const parentName = nameById.get(id);
     return {
       userId: id,
-      label: author.name,
+      label: parentName || author.name,
       authorAvatarUrl: author.avatarUrl,
+      email: emailById.get(id) ?? null,
       characters: byParent.get(id) ?? [],
     };
   });

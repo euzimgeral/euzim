@@ -24,15 +24,18 @@ export function VisibilityToggle({
   storyId,
   initial,
   iconOnly = false,
+  hasCollaborators = false,
 }: {
   storyId: string;
   initial: StoryVisibility;
-  /** Só o ícone atual + submenu (biblioteca Pais). */
+  /** Só o ícone atual + submenu (biblioteca Criação). */
   iconOnly?: boolean;
+  hasCollaborators?: boolean;
 }) {
   const [value, setValue] = useState<StoryVisibility>(initial);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const CurrentIcon = iconFor(value);
@@ -52,17 +55,32 @@ export function VisibilityToggle({
       return;
     }
     const prev = value;
-    setValue(next);
     setError(null);
+    setInfo(null);
     setOpen(false);
     startTransition(async () => {
       const result = await updateStoryVisibilityAction(storyId, next);
       if (result.error) {
         setValue(prev);
         setError(result.error);
+        return;
       }
+      if (result.pendingApproval) {
+        setValue(prev);
+        setInfo(
+          result.message ??
+            "Aguardando aprovação dos colaboradores.",
+        );
+        return;
+      }
+      setValue(next);
     });
   }
+
+  const hint =
+    hasCollaborators && value === "private"
+      ? "Em colaboração: Amigos/Público exigem aprovação de todos."
+      : null;
 
   if (iconOnly) {
     return (
@@ -75,6 +93,7 @@ export function VisibilityToggle({
           disabled={pending}
           aria-label="Visibilidade da história"
           aria-expanded={open}
+          title={hint ?? undefined}
           onClick={() => setOpen((v) => !v)}
         >
           <CurrentIcon className="size-3.5" />
@@ -98,8 +117,13 @@ export function VisibilityToggle({
           </div>
         ) : null}
         {error ? (
-          <p className="absolute left-0 top-full z-10 mt-1 w-48 text-[10px] leading-snug text-destructive">
+          <p className="absolute left-0 top-full z-10 mt-1 w-52 text-[10px] leading-snug text-destructive">
             {error}
+          </p>
+        ) : null}
+        {info ? (
+          <p className="absolute left-0 top-full z-10 mt-1 w-52 text-[10px] leading-snug text-amber-800">
+            {info}
           </p>
         ) : null}
       </div>
@@ -124,7 +148,9 @@ export function VisibilityToggle({
           </Button>
         ))}
       </div>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {info ? <p className="text-xs text-amber-800">{info}</p> : null}
     </div>
   );
 }

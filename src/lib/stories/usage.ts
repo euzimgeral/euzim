@@ -4,6 +4,7 @@ import {
   FAMILY_SUBSCRIPTION,
   resolveSubscriptionPlan,
 } from "@/lib/billing/plans";
+import { resolveSubscriptionPlanAsync } from "@/lib/billing/plans-catalog-load";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -48,7 +49,10 @@ export function resolveRenewalIso(
 }
 
 async function resolveMonthlyLimit(planId?: string | null): Promise<number> {
-  const catalog = resolveSubscriptionPlan(planId || FAMILY_SUBSCRIPTION.planId);
+  const planKey = planId || FAMILY_SUBSCRIPTION.planId;
+  const catalog =
+    (await resolveSubscriptionPlanAsync(planKey)) ||
+    resolveSubscriptionPlan(planKey);
   const catalogLimit = catalog?.storiesPerMonth;
 
   const db = createAdminClient() ?? (await createClient());

@@ -13,7 +13,7 @@ import {
   normalizeSecurityPin,
 } from "@/lib/onboarding/pin-format";
 import { isPixarGeneratedUrl } from "@/lib/onboarding/pixar-url";
-import { fireTrackingEvent } from "@/lib/tracking/dispatch";
+import { dispatchTrackingEvent } from "@/lib/tracking/dispatch";
 
 export const maxDuration = 60;
 
@@ -28,13 +28,17 @@ export async function POST(request: Request) {
 
   let pin = "";
   let confirm = "";
+  let registrationEventId: string | undefined;
   try {
     const body = (await request.json()) as {
       pin?: string;
       confirmPin?: string;
+      registrationEventId?: string;
     };
     pin = String(body.pin ?? "").trim();
     confirm = String(body.confirmPin ?? "").trim();
+    const eid = String(body.registrationEventId ?? "").trim();
+    registrationEventId = eid || undefined;
   } catch {
     return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
   }
@@ -70,14 +74,16 @@ export async function POST(request: Request) {
     } catch {
       /* cookie opcional */
     }
-    fireTrackingEvent({
+    await dispatchTrackingEvent({
       event: "CompleteRegistration",
+      eventId: registrationEventId,
       user: {
         userId: user.id,
         email: user.email,
         fullName: user.fullName,
       },
-    });
+      commerce: { product: "Onboarding Euzim" },
+    }).catch(() => ({ eventId: registrationEventId || "", ok: false }));
     return NextResponse.json({ success: true, redirectTo: "/app/parent" });
   }
 
@@ -184,6 +190,7 @@ export async function POST(request: Request) {
   }
 
   let phone: string | null = null;
+  let fullName: string | null = user.fullName ?? null;
   try {
     const { data: profile } = await db
       .from("users")
@@ -191,25 +198,23 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .maybeSingle();
     phone = profile?.phone ?? null;
-    fireTrackingEvent({
-      event: "CompleteRegistration",
-      user: {
-        userId: user.id,
-        email: user.email,
-        fullName: profile?.full_name || user.fullName,
-        phone,
-      },
-    });
+    fullName = profile?.full_name || user.fullName;
   } catch {
-    fireTrackingEvent({
-      event: "CompleteRegistration",
-      user: {
-        userId: user.id,
-        email: user.email,
-        fullName: user.fullName,
-      },
-    });
+    /* segue com dados da sessão */
   }
+
+  // Await CAPI antes da resposta (mesmo event_id do browser).
+  await dispatchTrackingEvent({
+    event: "CompleteRegistration",
+    eventId: registrationEventId,
+    user: {
+      userId: user.id,
+      email: user.email,
+      fullName,
+      phone,
+    },
+    commerce: { product: "Onboarding Euzim" },
+  }).catch(() => ({ eventId: registrationEventId || "", ok: false }));
 
   return NextResponse.json({ success: true, redirectTo: "/app/parent" });
 }

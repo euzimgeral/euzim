@@ -23,7 +23,7 @@ async function KidsPageInner() {
   const stories = await listStoriesForParent(user.id);
 
   return (
-    <AppShell user={user} title="Área kids" kidsMode>
+    <AppShell user={user} title="Leitura" kidsMode>
       <div className="space-y-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
@@ -34,7 +34,11 @@ async function KidsPageInner() {
               Escolha uma história para ler. No final tem um quiz divertido.
             </p>
           </div>
-          <PinGuardButton label="Voltar aos pais" href="/app/parent" />
+          <PinGuardButton
+            label="Criação"
+            href="/app/parent"
+            skipPin={user.role === "admin"}
+          />
         </div>
 
         <section className="space-y-3">
@@ -104,7 +108,7 @@ async function KidsPageInner() {
 
 export default function KidsPage() {
   return (
-    <Suspense fallback={<AppPageFallback label="Carregando área kids…" />}>
+    <Suspense fallback={<AppPageFallback label="Carregando Leitura…" />}>
       <KidsPageInner />
     </Suspense>
   );

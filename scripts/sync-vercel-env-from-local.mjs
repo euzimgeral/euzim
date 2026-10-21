@@ -28,7 +28,7 @@ const KEYS = [
   "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
   "OPENROUTER_API_KEY",
   "OPENAI_API_KEY",
-  "APP_ENV",
+  // APP_ENV: sempre forçado para "production" abaixo (não ler do .env.local)
 ];
 
 function parseEnvFile(filePath) {

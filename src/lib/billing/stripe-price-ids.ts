@@ -4,17 +4,17 @@
  * Nunca coloque sk_/whsec_ neste arquivo.
  *
  * Em modo test (local :5050), use resolveStripePriceId() que lê o mapa
- * espelhado em stripe-price-ids.test.json.
+ * espelhado em data/stripe-price-ids.test.json (fora de src — evita HMR loop).
  */
 
 import { isStripeTestMode } from "@/lib/stripe/config";
 import { readStripeTestPriceMap } from "@/lib/billing/stripe-price-map";
 
 export const STRIPE_PRICE_IDS = {
-  starter: "price_1URZD42RGWYUXReL1LuaJkHI",
-  family: "price_1URZD42RGWYUXReLwWbPWFkf",
-  plus: "price_1USgrd2RGWYUXReLZ2xl5DpA",
-  extra_story: "price_1URZD42RGWYUXReLzlaa8myj",
+  starter: "price_1UT2Bd2RGWYUXReLGjicusHW",
+  family: "price_1UT2Bj2RGWYUXReLDsCdJXAo",
+  plus: "price_1UT2Bo2RGWYUXReLqJ6trzyF",
+  extra_story: "price_1USgrg2RGWYUXReLp1XSmLBw",
   extra_story_starter: "price_1USgre2RGWYUXReLd28gsvrS",
   extra_story_family: "price_1USgrf2RGWYUXReLV0QuV6tA",
   extra_story_plus: "price_1USgrg2RGWYUXReLp1XSmLBw",
@@ -31,7 +31,7 @@ export const STRIPE_PRODUCT_IDS = {
   starter: "prod_VSUBri2FlAVcly",
   family: "prod_VSUBYLdM2LhWTn",
   plus: "prod_VTe94QxabUnvqm",
-  extra_story: "prod_VSUByEpOj2mabF",
+  extra_story: "prod_VTeAFXUOEYFagg",
   extra_story_starter: "prod_VTe9hZdUmvFxmp",
   extra_story_family: "prod_VTe9G2VIhTvQan",
   extra_story_plus: "prod_VTeAFXUOEYFagg",

@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { loadStoryForParent } from "@/lib/stories/load-story";
 import { getQuizProgress } from "@/lib/stories/games-store";
 import { loadPageFeedbackVotes } from "@/lib/stories/page-feedback";
+import { recordStoryViewAction } from "@/lib/stories/view-actions";
 
 async function StoryReaderPageInner({ id }: { id: string }) {
   await connection();
@@ -16,6 +17,7 @@ async function StoryReaderPageInner({ id }: { id: string }) {
   const story = await loadStoryForParent(id, user.id);
   if (!story) notFound();
 
+  await recordStoryViewAction(story.id);
   const progress = await getQuizProgress(story.id, user.id);
   const pageFeedback = await loadPageFeedbackVotes(story.id, user.id);
 

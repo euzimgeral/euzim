@@ -23,7 +23,7 @@ import { finishAvatarOnboardingAction } from "@/lib/onboarding/actions";
 import { isPixarGeneratedUrl } from "@/lib/onboarding/pixar-url";
 import { applyReferralAttribution } from "@/lib/referral/attribution";
 import { ensureReferralCode } from "@/lib/referral/codes";
-import { fireTrackingEvent } from "@/lib/tracking/dispatch";
+import { dispatchTrackingEvent } from "@/lib/tracking/dispatch";
 
 export type AuthActionResult = {
   error?: string;
@@ -103,6 +103,8 @@ export async function signUpAction(
     return { error: "Informe e-mail e senha (mín. 6 caracteres)." };
   }
 
+  const leadEventId = String(formData.get("leadEventId") ?? "").trim() || undefined;
+
   if (!isSupabaseConfigured()) {
     const mockId = createMockUserId();
     await writeMockSession({
@@ -120,10 +122,13 @@ export async function signUpAction(
       friendPhotos: [],
       completed: false,
     });
-    fireTrackingEvent({
+    // Await antes do redirect — fire-and-forget era abortado e Lead sumia.
+    await dispatchTrackingEvent({
       event: "Lead",
+      eventId: leadEventId,
       user: { email, fullName, phone, userId: mockId },
-    });
+      commerce: { product: "Cadastro Euzim" },
+    }).catch(() => ({ eventId: leadEventId || "", ok: false }));
     const nextMock = String(formData.get("next") ?? "").trim();
     redirect(nextMock.startsWith("/") ? nextMock : "/onboarding");
   }
@@ -187,15 +192,18 @@ export async function signUpAction(
     }
     await ensureReferralCode(newUserId);
     await applyReferralAttribution(newUserId);
-    fireTrackingEvent({
+    // Await CAPI/webhooks antes do redirect (mesmo event_id do browser).
+    await dispatchTrackingEvent({
       event: "Lead",
+      eventId: leadEventId,
       user: {
         email,
         fullName,
         phone,
         userId: newUserId,
       },
-    });
+      commerce: { product: "Cadastro Euzim" },
+    }).catch(() => ({ eventId: leadEventId || "", ok: false }));
   }
 
   const next = String(formData.get("next") ?? "").trim();

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Share2, Sparkles } from "lucide-react";
+import { Eye, Heart, Share2, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { StoryUsageTracker } from "@/components/parent/story-usage-tracker";
@@ -16,10 +16,14 @@ import {
 import { WallpaperDialog } from "@/components/parent/wallpaper-dialog";
 import { ShareAppButton } from "@/components/referral/share-app-button";
 import { ShareProfileButton } from "@/components/social/share-profile-button";
+import { PendingRequestsBanner } from "@/components/social/pending-requests-banner";
+import { PendingVisibilityBanner } from "@/components/social/pending-visibility-banner";
 import { VisibilityToggle } from "@/components/social/visibility-toggle";
 import type { StoryUsage } from "@/lib/stories/usage";
 import type { ChildFamilyMeta } from "@/lib/characters/types";
 import type { StoryVisibility } from "@/lib/social/types";
+import type { PendingFriendship } from "@/lib/social/types";
+import type { PendingVisibilityRequest } from "@/lib/social/visibility-collab";
 
 type StoryListItem = {
   id: string;
@@ -28,6 +32,9 @@ type StoryListItem = {
   wallpaperImageUrl?: string | null;
   createdAt?: string;
   visibility?: StoryVisibility;
+  viewCount?: number;
+  likeCount?: number;
+  hasCollaborators?: boolean;
 };
 
 function ParentShareMenu() {
@@ -75,6 +82,8 @@ export function ParentDashboard({
   childMeta,
   stories,
   billing,
+  friendRequests = [],
+  visibilityRequests = [],
 }: {
   usage: StoryUsage;
   characters: CharacterManageRow[];
@@ -84,6 +93,8 @@ export function ParentDashboard({
   childMeta?: ChildFamilyMeta | null;
   stories: StoryListItem[];
   billing: BillingSnapshot;
+  friendRequests?: PendingFriendship[];
+  visibilityRequests?: PendingVisibilityRequest[];
 }) {
   const remaining = Math.max(0, usage.limit - usage.used);
   const primary =
@@ -101,6 +112,9 @@ export function ParentDashboard({
   return (
     <div className="space-y-6">
       <StoryJobNotifier />
+
+      <PendingRequestsBanner requests={friendRequests} kidsMode={false} />
+      <PendingVisibilityBanner requests={visibilityRequests} />
 
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-[radial-gradient(ellipse_at_top_left,_oklch(0.95_0.04_85),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_oklch(0.94_0.03_210),_transparent_50%)] p-5 sm:p-7">
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
@@ -170,7 +184,10 @@ export function ParentDashboard({
                 const wallpaperUrl =
                   story.wallpaperImageUrl || story.coverImageUrl || "";
                 const dateLabel = story.createdAt
-                  ? story.createdAt.slice(0, 10).split("-").reverse().join("/")
+                  ? new Date(story.createdAt).toLocaleString("pt-BR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })
                   : null;
                 return (
                   <li
@@ -189,13 +206,23 @@ export function ParentDashboard({
                         <div className="size-20 shrink-0 rounded-md bg-muted sm:size-24" />
                       )}
                       <div className="flex min-w-0 flex-1 flex-col justify-between gap-2">
-                        <div className="min-w-0">
+                        <div className="min-w-0 space-y-1">
                           <p className="truncate font-medium">{story.title}</p>
                           {dateLabel ? (
                             <p className="text-xs text-muted-foreground">
                               {dateLabel}
                             </p>
                           ) : null}
+                          <p className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <Eye className="size-3.5" />
+                              {story.viewCount ?? 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Heart className="size-3.5" />
+                              {story.likeCount ?? 0}
+                            </span>
+                          </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Button asChild size="sm" variant="outline">
@@ -220,6 +247,7 @@ export function ParentDashboard({
                             storyId={story.id}
                             initial={story.visibility ?? "private"}
                             iconOnly
+                            hasCollaborators={Boolean(story.hasCollaborators)}
                           />
                         </div>
                       </div>

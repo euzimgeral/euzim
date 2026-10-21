@@ -31,6 +31,11 @@ export async function updateSupabaseSession(request: NextRequest) {
     ? ({ id: "cookie-session" } as { id: string })
     : null;
 
+  // Sem cookie: não bate no GoTrue (landing/públicas já skipam; /app redireciona).
+  if (!cookieUser) {
+    return { response, user: null };
+  }
+
   const { url, anonKey } = getSupabaseEnv();
 
   const supabase = createServerClient(url, anonKey, {
@@ -52,20 +57,21 @@ export async function updateSupabaseSession(request: NextRequest) {
     },
   });
 
-  const sessionPromise = supabase.auth.getSession().then(({ data }) => {
-    return data.session?.user ?? null;
-  });
+  const sessionPromise = supabase.auth
+    .getSession()
+    .then(({ data }) => data.session?.user ?? null)
+    .catch(() => null);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const raced = await Promise.race([
     sessionPromise,
     new Promise<"timeout">((resolve) => {
-      timer = setTimeout(() => resolve("timeout"), 1500);
+      timer = setTimeout(() => resolve("timeout"), 800);
     }),
   ]);
   if (timer) clearTimeout(timer);
 
-  if (raced === "timeout") {
+  if (raced === "timeout" || raced == null) {
     // Não espera Auth: cookie basta para liberar /app; página revalida depois.
     return { response, user: cookieUser };
   }

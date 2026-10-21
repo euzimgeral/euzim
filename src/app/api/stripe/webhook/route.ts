@@ -16,6 +16,7 @@ import {
 } from "@/lib/stripe/fulfillment";
 import { subscriptionPeriodEndIso } from "@/lib/stripe/subscription-period";
 import { grantReferralRewardOnFirstSubscription } from "@/lib/referral/rewards";
+import { creditReferralPointsOnRenewal } from "@/lib/referral/points";
 import { fireTrackingEvent } from "@/lib/tracking/dispatch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -167,6 +168,52 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   return { skipped: true, reason: "unknown kind" };
 }
 
+/**
+ * Renovação (subscription_cycle): credita gift_points_recur ao indicador.
+ * Ignora subscription_create (já coberto no checkout / first).
+ */
+async function handleInvoicePaidReferral(invoice: Stripe.Invoice) {
+  const reason = invoice.billing_reason;
+  if (reason !== "subscription_cycle") {
+    return { skipped: true, reason: reason || "not_cycle" };
+  }
+
+  const parentSub = invoice.parent?.subscription_details?.subscription;
+  const subId =
+    typeof parentSub === "string"
+      ? parentSub
+      : parentSub && typeof parentSub === "object" && "id" in parentSub
+        ? String((parentSub as { id: string }).id)
+        : null;
+  if (!subId || !invoice.id) {
+    return { skipped: true, reason: "missing subscription/invoice" };
+  }
+
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "Admin indisponível." };
+
+  const { data: profile } = await admin
+    .from("users")
+    .select("id, subscription_plan_id, referred_by")
+    .eq("stripe_subscription_id", subId)
+    .maybeSingle();
+
+  if (!profile?.id || !profile.referred_by) {
+    return { skipped: true, reason: "no referrer" };
+  }
+
+  const planId =
+    (typeof profile.subscription_plan_id === "string" &&
+      profile.subscription_plan_id) ||
+    "family";
+
+  return creditReferralPointsOnRenewal({
+    refereeId: profile.id,
+    planId,
+    invoiceId: invoice.id,
+  });
+}
+
 export async function POST(request: Request) {
   if (!isStripeSecretValid()) {
     return NextResponse.json(
@@ -227,6 +274,11 @@ export async function POST(request: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         const result = await handleCheckoutCompleted(session);
         return NextResponse.json({ received: true, result });
+      }
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const referral = await handleInvoicePaidReferral(invoice);
+        return NextResponse.json({ received: true, referral });
       }
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {

@@ -11,6 +11,8 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { readMockOnboarding } from "@/lib/auth/mock-session";
 import { MONTHLY_STORY_LIMIT } from "@/lib/billing/character-packs";
 import { getAvatarRefreshStatus } from "@/lib/onboarding/avatar-refresh";
+import { listPendingFriendRequests } from "@/lib/social/friend-actions";
+import { listPendingVisibilityApprovalsForUser } from "@/lib/social/visibility-collab";
 import { getStoryUsage } from "@/lib/stories/usage";
 import { listStoriesForParent } from "@/lib/stories/load-story";
 import { countMockStoriesThisMonth } from "@/lib/stories/mock-store";
@@ -219,9 +221,13 @@ async function ParentPageInner() {
 
   const stories = await listStoriesForParent(user.id);
   const refreshStatus = await getAvatarRefreshStatus(user.id);
+  const [friendRequests, visibilityRequests] = await Promise.all([
+    listPendingFriendRequests(user.id),
+    listPendingVisibilityApprovalsForUser(user.id),
+  ]);
 
   return (
-    <AppShell user={user} title="Área dos pais">
+    <AppShell user={user} title="Criação">
       <div className="space-y-4">
         <AvatarRefreshBanner status={refreshStatus} />
         <PendingGiftsBanner compact />
@@ -234,6 +240,8 @@ async function ParentPageInner() {
           childMeta={childMeta}
           stories={stories}
           billing={billing}
+          friendRequests={friendRequests}
+          visibilityRequests={visibilityRequests}
         />
       </div>
     </AppShell>
@@ -242,7 +250,7 @@ async function ParentPageInner() {
 
 export default function ParentPage() {
   return (
-    <Suspense fallback={<AppPageFallback label="Carregando área dos pais…" />}>
+    <Suspense fallback={<AppPageFallback label="Carregando Criação…" />}>
       <ParentPageInner />
     </Suspense>
   );

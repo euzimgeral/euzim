@@ -96,8 +96,15 @@ export async function proxy(request: NextRequest) {
   // — isso engolia a :5050 e derrubava o WebSocket do HMR.
   const isApi = pathname.startsWith("/api/");
   const isAuthPageEarly = pathname === "/login" || pathname === "/signup";
-  // Login/signup: zero rede Auth no proxy (página precisa abrir na hora).
-  const skipSessionRefresh = isApi || isAuthPageEarly;
+  // Landing / share / convite: sem refresh Auth no proxy (cookie basta nas páginas).
+  // Auth flaky aqui = Suspense dehydrate + spam [HMR] connected.
+  const isPublicMarketing =
+    pathname === "/" ||
+    pathname.startsWith("/story/") ||
+    pathname.startsWith("/invite/") ||
+    pathname.startsWith("/r/");
+  // Login/signup + marketing: zero rede Auth no proxy.
+  const skipSessionRefresh = isApi || isAuthPageEarly || isPublicMarketing;
 
   if (isSupabaseConfigured() && !skipSessionRefresh) {
     const result = await updateSupabaseSession(request);

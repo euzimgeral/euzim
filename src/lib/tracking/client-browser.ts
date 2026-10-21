@@ -218,9 +218,31 @@ export async function trackBrowserEvent(
   const attribution = readClientAttribution();
   const url = typeof window !== "undefined" ? window.location.href : undefined;
 
-  // Meta browser
+  // Meta browser (+ Advanced Matching quando houver PII)
   if (window.fbq && config?.metaPixelIds.length) {
-    const payload: Record<string, unknown> = {};
+    const am: Record<string, string> = {};
+    if (opts.user?.email) am.em = opts.user.email.trim().toLowerCase();
+    if (opts.user?.phone) {
+      const ph = opts.user.phone.replace(/\D/g, "");
+      if (ph) am.ph = ph;
+    }
+    if (opts.user?.fullName) {
+      const parts = opts.user.fullName.trim().split(/\s+/);
+      if (parts[0]) am.fn = parts[0].toLowerCase();
+      if (parts.length > 1) am.ln = parts.slice(1).join(" ").toLowerCase();
+    }
+    if (opts.user?.firstName) am.fn = opts.user.firstName.trim().toLowerCase();
+    if (opts.user?.lastName) am.ln = opts.user.lastName.trim().toLowerCase();
+    if (opts.user?.userId) am.external_id = String(opts.user.userId);
+    if (Object.keys(am).length) {
+      for (const id of config.metaPixelIds) {
+        window.fbq("init", id, am);
+      }
+    }
+
+    const payload: Record<string, unknown> = {
+      funnel_event: opts.event,
+    };
     if (opts.commerce?.value != null) {
       payload.value = opts.commerce.value;
       payload.currency = (opts.commerce.currency || "BRL").toUpperCase();

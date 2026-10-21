@@ -31,26 +31,29 @@ async function HomeInner({
   const params = await searchParams;
   const mockMode = !isSupabaseConfigured();
   const hasRef = Boolean(params.ref && params.ref.trim());
+
+  // Landing anônima NÃO chama Auth — getSession flaky (AuthRetryableFetchError)
+  // prendia Suspense ~8s, estourava dehydrate e o HMR ficava em loop ([HMR] connected).
+  if (!hasRef) {
+    return <LandingHome mockMode={mockMode} />;
+  }
+
   const user = await getCurrentUser();
 
-  if (hasRef && user) {
+  if (user) {
     redirect(resolveAppHomePath(user));
   }
 
-  if (hasRef && !user) {
-    return (
-      <div className="landing-root relative flex min-h-full flex-1 flex-col">
-        <header className="relative z-10 flex items-center justify-between px-5 py-4 sm:px-8 md:px-12">
-          <BrandLogo size="header" priority />
-        </header>
-        <main className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-5 pb-16">
-          <HasAccountGate nextPath="/onboarding" />
-        </main>
-      </div>
-    );
-  }
-
-  return <LandingHome mockMode={mockMode} />;
+  return (
+    <div className="landing-root relative flex min-h-full flex-1 flex-col">
+      <header className="relative z-10 flex items-center justify-between px-5 py-4 sm:px-8 md:px-12">
+        <BrandLogo size="header" priority />
+      </header>
+      <main className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-5 pb-16">
+        <HasAccountGate nextPath="/onboarding" />
+      </main>
+    </div>
+  );
 }
 
 export default function Home({

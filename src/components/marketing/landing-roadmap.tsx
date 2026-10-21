@@ -11,8 +11,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { InlineBrand } from "@/components/brand/inline-brand";
-import { formatBrl } from "@/lib/billing/character-packs";
-import { STARTER_SUBSCRIPTION } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 const SERENA_PHOTOS = [
@@ -79,8 +77,8 @@ function PhotoGrid({
   );
 }
 
-function SignupMock() {
-  const priceLabel = formatBrl(STARTER_SUBSCRIPTION.priceBrl);
+function SignupMock({ entryPriceLabel }: { entryPriceLabel: string }) {
+  const priceLabel = entryPriceLabel;
   const [phase, setPhase] = useState<SignupPhase>("cta");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -464,10 +462,16 @@ const STEPS: {
   },
 ];
 
-function StepVisual({ kind }: { kind: (typeof STEPS)[number]["visual"] }) {
+function StepVisual({
+  kind,
+  entryPriceLabel,
+}: {
+  kind: (typeof STEPS)[number]["visual"];
+  entryPriceLabel: string;
+}) {
   switch (kind) {
     case "signup":
-      return <SignupMock />;
+      return <SignupMock entryPriceLabel={entryPriceLabel} />;
     case "serena":
       return <PhotoGrid photos={SERENA_PHOTOS} label="Fotos da Serena" />;
     case "bingo":
@@ -478,10 +482,18 @@ function StepVisual({ kind }: { kind: (typeof STEPS)[number]["visual"] }) {
       return <AiWorkingMock />;
     case "covers":
       return <BookCoversMock />;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
   }
 }
 
-export function LandingRoadmap() {
+export function LandingRoadmap({
+  entryPriceLabel,
+}: {
+  entryPriceLabel: string;
+}) {
   return (
     <section
       id="como-funciona"
@@ -539,7 +551,10 @@ export function LandingRoadmap() {
                 </div>
 
                 <div className="landing-roadmap-visual">
-                  <StepVisual kind={step.visual} />
+                  <StepVisual
+                    kind={step.visual}
+                    entryPriceLabel={entryPriceLabel}
+                  />
                 </div>
               </li>
             );

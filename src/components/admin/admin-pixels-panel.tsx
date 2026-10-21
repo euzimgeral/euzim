@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,10 @@ export function AdminPixelsPanel({
   const [section, setSection] = useState<
     "meta" | "google_ads" | "ga4" | "tags" | "webhooks"
   >("meta");
+
+  const [editingPixelId, setEditingPixelId] = useState<string | null>(null);
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editingWebhookId, setEditingWebhookId] = useState<string | null>(null);
 
   // Meta form
   const [metaLabel, setMetaLabel] = useState("");
@@ -92,6 +96,59 @@ export function AdminPixelsPanel({
   const pixelsOf = (kind: PixelKind) =>
     bundle.pixels.filter((p) => p.kind === kind);
 
+  function clearPixelForms() {
+    setEditingPixelId(null);
+    setMetaLabel("");
+    setMetaPixelId("");
+    setMetaToken("");
+    setAdsLabel("");
+    setAdsAwId("");
+    setAdsLabels({});
+    setGa4Label("");
+    setGa4Id("");
+  }
+
+  function startEditPixel(kind: PixelKind, id: string) {
+    const p = bundle.pixels.find((x) => x.id === id);
+    if (!p) return;
+    setSection(kind);
+    setEditingPixelId(p.id);
+    if (kind === "meta") {
+      setMetaLabel(p.label || "");
+      setMetaPixelId(p.pixel_id || "");
+      setMetaToken(p.capi_access_token || "");
+    } else if (kind === "google_ads") {
+      setAdsLabel(p.label || "");
+      setAdsAwId(p.aw_id || "");
+      setAdsLabels(
+        (p.conversion_labels as Record<string, string> | null) || {},
+      );
+    } else {
+      setGa4Label(p.label || "");
+      setGa4Id(p.measurement_id || "");
+    }
+  }
+
+  function startEditTag(id: string) {
+    const t = bundle.tags.find((x) => x.id === id);
+    if (!t) return;
+    setSection("tags");
+    setEditingTagId(t.id);
+    setTagName(t.name || "");
+    setTagHtml(t.html || "");
+  }
+
+  function startEditWebhook(id: string) {
+    const w = bundle.webhooks.find((x) => x.id === id);
+    if (!w) return;
+    setSection("webhooks");
+    setEditingWebhookId(w.id);
+    setWhLabel(w.label || "");
+    setWhUrl(w.url || "");
+    setWhSecret(w.secret || "");
+    setWhEvents(Array.isArray(w.events) ? w.events : []);
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -100,6 +157,7 @@ export function AdminPixelsPanel({
         </h2>
         <p className="text-sm text-muted-foreground">
           Meta CAPI, Google Ads, GA4, tags no head e webhooks de conversão.
+          Clique em editar para alterar um cadastro existente.
         </p>
       </div>
 
@@ -139,7 +197,22 @@ export function AdminPixelsPanel({
       {section === "meta" ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-border/70 p-4 space-y-3">
-            <p className="text-sm font-medium">Novo pixel Meta</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">
+                {editingPixelId ? "Editar pixel Meta" : "Novo pixel Meta"}
+              </p>
+              {editingPixelId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearPixelForms}
+                >
+                  <X className="size-3.5" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Label</Label>
@@ -174,6 +247,7 @@ export function AdminPixelsPanel({
               onClick={() =>
                 run(() =>
                   upsertTrackingPixelAction({
+                    id: editingPixelId || undefined,
                     kind: "meta",
                     label: metaLabel || "Meta",
                     isActive: true,
@@ -183,8 +257,17 @@ export function AdminPixelsPanel({
                 )
               }
             >
-              <Plus className="size-3.5" />
-              Adicionar Meta
+              {editingPixelId ? (
+                <>
+                  <Pencil className="size-3.5" />
+                  Salvar Meta
+                </>
+              ) : (
+                <>
+                  <Plus className="size-3.5" />
+                  Adicionar Meta
+                </>
+              )}
             </Button>
           </div>
           <ul className="space-y-2">
@@ -207,6 +290,16 @@ export function AdminPixelsPanel({
                   <Button
                     type="button"
                     size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => startEditPixel("meta", p.id)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
                     variant="ghost"
                     disabled={pending}
                     onClick={() => run(() => deleteTrackingPixelAction(p.id))}
@@ -226,7 +319,22 @@ export function AdminPixelsPanel({
       {section === "google_ads" ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-border/70 p-4 space-y-3">
-            <p className="text-sm font-medium">Novo Google Ads</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">
+                {editingPixelId ? "Editar Google Ads" : "Novo Google Ads"}
+              </p>
+              {editingPixelId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearPixelForms}
+                >
+                  <X className="size-3.5" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Label</Label>
@@ -268,6 +376,7 @@ export function AdminPixelsPanel({
               onClick={() =>
                 run(() =>
                   upsertTrackingPixelAction({
+                    id: editingPixelId || undefined,
                     kind: "google_ads",
                     label: adsLabel || "Google Ads",
                     isActive: true,
@@ -277,8 +386,17 @@ export function AdminPixelsPanel({
                 )
               }
             >
-              <Plus className="size-3.5" />
-              Adicionar Ads
+              {editingPixelId ? (
+                <>
+                  <Pencil className="size-3.5" />
+                  Salvar Ads
+                </>
+              ) : (
+                <>
+                  <Plus className="size-3.5" />
+                  Adicionar Ads
+                </>
+              )}
             </Button>
           </div>
           <ul className="space-y-2">
@@ -291,15 +409,27 @@ export function AdminPixelsPanel({
                   <p className="font-medium">{p.label || "Ads"}</p>
                   <p className="text-xs text-muted-foreground">{p.aw_id}</p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => run(() => deleteTrackingPixelAction(p.id))}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => startEditPixel("google_ads", p.id)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => run(() => deleteTrackingPixelAction(p.id))}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -309,7 +439,22 @@ export function AdminPixelsPanel({
       {section === "ga4" ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-border/70 p-4 space-y-3">
-            <p className="text-sm font-medium">Novo GA4</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">
+                {editingPixelId ? "Editar GA4" : "Novo GA4"}
+              </p>
+              {editingPixelId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearPixelForms}
+                >
+                  <X className="size-3.5" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Label</Label>
@@ -334,6 +479,7 @@ export function AdminPixelsPanel({
               onClick={() =>
                 run(() =>
                   upsertTrackingPixelAction({
+                    id: editingPixelId || undefined,
                     kind: "ga4",
                     label: ga4Label || "GA4",
                     isActive: true,
@@ -342,8 +488,17 @@ export function AdminPixelsPanel({
                 )
               }
             >
-              <Plus className="size-3.5" />
-              Adicionar GA4
+              {editingPixelId ? (
+                <>
+                  <Pencil className="size-3.5" />
+                  Salvar GA4
+                </>
+              ) : (
+                <>
+                  <Plus className="size-3.5" />
+                  Adicionar GA4
+                </>
+              )}
             </Button>
           </div>
           <ul className="space-y-2">
@@ -358,15 +513,27 @@ export function AdminPixelsPanel({
                     {p.measurement_id}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => run(() => deleteTrackingPixelAction(p.id))}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => startEditPixel("ga4", p.id)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => run(() => deleteTrackingPixelAction(p.id))}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -376,7 +543,26 @@ export function AdminPixelsPanel({
       {section === "tags" ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-border/70 p-4 space-y-3">
-            <p className="text-sm font-medium">Nova tag HTML/JS</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">
+                {editingTagId ? "Editar tag HTML/JS" : "Nova tag HTML/JS"}
+              </p>
+              {editingTagId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingTagId(null);
+                    setTagName("");
+                    setTagHtml("");
+                  }}
+                >
+                  <X className="size-3.5" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
             <div className="space-y-1.5">
               <Label>Nome</Label>
               <Input
@@ -400,6 +586,7 @@ export function AdminPixelsPanel({
               onClick={() =>
                 run(() =>
                   upsertTrackingTagAction({
+                    id: editingTagId || undefined,
                     name: tagName || "Tag",
                     html: tagHtml,
                     isActive: true,
@@ -407,8 +594,17 @@ export function AdminPixelsPanel({
                 )
               }
             >
-              <Plus className="size-3.5" />
-              Adicionar tag
+              {editingTagId ? (
+                <>
+                  <Pencil className="size-3.5" />
+                  Salvar tag
+                </>
+              ) : (
+                <>
+                  <Plus className="size-3.5" />
+                  Adicionar tag
+                </>
+              )}
             </Button>
           </div>
           <ul className="space-y-2">
@@ -424,15 +620,27 @@ export function AdminPixelsPanel({
                     {t.html.length > 80 ? "…" : ""}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => run(() => deleteTrackingTagAction(t.id))}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => startEditTag(t.id)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => run(() => deleteTrackingTagAction(t.id))}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -442,7 +650,27 @@ export function AdminPixelsPanel({
       {section === "webhooks" ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-border/70 p-4 space-y-3">
-            <p className="text-sm font-medium">Novo webhook</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">
+                {editingWebhookId ? "Editar webhook" : "Novo webhook"}
+              </p>
+              {editingWebhookId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingWebhookId(null);
+                    setWhLabel("");
+                    setWhUrl("");
+                    setWhSecret("");
+                  }}
+                >
+                  <X className="size-3.5" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Label</Label>
@@ -496,6 +724,7 @@ export function AdminPixelsPanel({
               onClick={() =>
                 run(() =>
                   upsertTrackingWebhookAction({
+                    id: editingWebhookId || undefined,
                     label: whLabel || "Webhook",
                     url: whUrl,
                     secret: whSecret,
@@ -505,8 +734,17 @@ export function AdminPixelsPanel({
                 )
               }
             >
-              <Plus className="size-3.5" />
-              Adicionar webhook
+              {editingWebhookId ? (
+                <>
+                  <Pencil className="size-3.5" />
+                  Salvar webhook
+                </>
+              ) : (
+                <>
+                  <Plus className="size-3.5" />
+                  Adicionar webhook
+                </>
+              )}
             </Button>
           </div>
           <ul className="space-y-2">
@@ -524,21 +762,32 @@ export function AdminPixelsPanel({
                     {(w.events || []).join(", ")}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => run(() => deleteTrackingWebhookAction(w.id))}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => startEditWebhook(w.id)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => run(() => deleteTrackingWebhookAction(w.id))}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
-
     </div>
   );
 }

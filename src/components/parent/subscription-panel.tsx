@@ -15,6 +15,7 @@ import {
 import {
   SUBSCRIPTION_PLANS,
   extraStoryForPlan,
+  type StoryPlan,
 } from "@/lib/billing/plans";
 import { formatBrl } from "@/lib/billing/character-packs";
 import {
@@ -35,7 +36,13 @@ export type BillingSnapshot = {
   keyIssue: string | null;
 };
 
-export function SubscriptionPanel({ billing }: { billing: BillingSnapshot }) {
+export function SubscriptionPanel({
+  billing,
+  plans = SUBSCRIPTION_PLANS,
+}: {
+  billing: BillingSnapshot;
+  plans?: StoryPlan[];
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -97,7 +104,6 @@ export function SubscriptionPanel({ billing }: { billing: BillingSnapshot }) {
     });
   }
 
-  const plans = SUBSCRIPTION_PLANS;
   const extra = extraStoryForPlan(billing.planId);
 
   return (
