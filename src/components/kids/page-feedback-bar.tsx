@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  regenerateStoryPageFromFeedbackAction,
-  saveStoryPageFeedbackAction,
-} from "@/lib/stories/page-feedback-actions";
+import { saveStoryPageFeedbackAction } from "@/lib/stories/page-feedback-actions";
 import type { PageFeedbackRating } from "@/lib/stories/page-feedback";
 import { withAlpha } from "@/lib/stories/palette";
 
@@ -31,7 +28,6 @@ export function PageFeedbackBar({
   imageUrl,
   initial,
   palette,
-  onImageReplaced,
   /** Compacto: pergunta + votos à esquerda; `toolbarEnd` à direita (nav). */
   compact = false,
   toolbarEnd,
@@ -41,7 +37,6 @@ export function PageFeedbackBar({
   imageUrl: string;
   initial?: PageFeedbackState | null;
   palette: PaletteBits;
-  onImageReplaced?: (pageIndex: number, imageUrl: string) => void;
   compact?: boolean;
   /** Conteúdo à direita na mesma linha (Anterior / página / Próxima). */
   toolbarEnd?: ReactNode;
@@ -103,25 +98,8 @@ export function PageFeedbackBar({
         return;
       }
       setRating("dislike");
-      setStatus("Feedback salvo. Pode pedir uma nova imagem.");
-    });
-  }
-
-  function onRegenerate() {
-    startTransition(async () => {
-      setStatus("Gerando nova imagem…");
-      const res = await regenerateStoryPageFromFeedbackAction({
-        storyId,
-        pageIndex,
-        comment,
-      });
-      if (!res.ok || !res.imageUrl) {
-        setStatus(res.error || "Falha ao regenerar.");
-        return;
-      }
-      setRating("dislike");
-      onImageReplaced?.(pageIndex, res.imageUrl);
-      setStatus("Nova imagem pronta!");
+      setShowDislikeForm(false);
+      setStatus("Feedback salvo. Vamos usar isso para melhorar as próximas histórias.");
     });
   }
 
@@ -214,24 +192,11 @@ export function PageFeedbackBar({
                 type="button"
                 size="sm"
                 disabled={pending || comment.trim().length < 3}
-                className="font-story-body border-0 shadow-sm"
-                style={{ background: palette.soft, color: palette.text }}
+                className="font-story-body border-0 shadow-md"
+                style={{ background: palette.deep, color: palette.paper }}
                 onClick={onSaveDislike}
               >
                 Salvar feedback
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={pending || comment.trim().length < 3}
-                className="font-story-body gap-1.5 border-0 shadow-md"
-                style={{ background: palette.deep, color: palette.paper }}
-                onClick={onRegenerate}
-              >
-                {pending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : null}
-                Gerar nova imagem
               </Button>
             </div>
           </div>

@@ -27,7 +27,7 @@ import {
   WORD_VOLUME_TARGETS,
 } from "@/lib/stories/storyteller-skill";
 import { meteredChatCompletion } from "@/lib/usage/openai-meter";
-import { loadFeedbackLessons } from "@/lib/stories/page-feedback";
+import { loadLearningMemory } from "@/lib/learning/load-memory";
 import { realignChaptersToPageText } from "@/lib/stories/align-page-prompts";
 import { directPageImagePrompts } from "@/lib/stories/page-director";
 import { enforceCompanionSpeciesInText } from "@/lib/stories/story-cast";
@@ -728,7 +728,10 @@ export async function generateStoryPipeline(input: {
   const theme = input.theme.trim();
   const cast = input.cast;
   const baseOpts = input.options;
-  const lessons = await loadFeedbackLessons(baseOpts?.userId);
+  const lessons = await loadLearningMemory({
+    theme,
+    userId: baseOpts?.userId,
+  });
   const opts: PipelineOptions | undefined = {
     ...baseOpts,
     feedbackStoryRules:

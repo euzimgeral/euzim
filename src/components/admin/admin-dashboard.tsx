@@ -26,6 +26,7 @@ import {
 import type { PixelsAdminBundle } from "@/lib/admin/pixels-actions";
 import { AdminPixelsPanel } from "@/components/admin/admin-pixels-panel";
 import { AdminPlansPanel } from "@/components/admin/admin-plans-panel";
+import { AdminLearningPanel } from "@/components/admin/admin-learning-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PLAN_SOURCE_LABELS,
@@ -34,6 +35,7 @@ import {
 import type { PlanCatalogRow } from "@/lib/billing/plan-catalog-shared";
 import { SUBSCRIPTION_PLANS } from "@/lib/billing/plans";
 import { formatBrl } from "@/lib/billing/character-packs";
+import type { AiLearningEntry } from "@/lib/learning/types";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "-";
@@ -71,12 +73,14 @@ export function AdminDashboard({
   loadError,
   pixelsBundle,
   planCatalog,
+  learningEntries,
 }: {
   kpis: AdminKpis;
   accounts: AdminAccountRow[];
   loadError?: string;
   pixelsBundle: PixelsAdminBundle;
   planCatalog: PlanCatalogRow[];
+  learningEntries: AiLearningEntry[];
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -187,6 +191,7 @@ export function AdminDashboard({
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="pixels">Pixels</TabsTrigger>
           <TabsTrigger value="plans">Planos</TabsTrigger>
+          <TabsTrigger value="learning">Aprendizado</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pixels" className="space-y-6">
@@ -195,6 +200,10 @@ export function AdminDashboard({
 
         <TabsContent value="plans" className="space-y-6">
           <AdminPlansPanel initialPlans={planCatalog} />
+        </TabsContent>
+
+        <TabsContent value="learning" className="space-y-6">
+          <AdminLearningPanel initialEntries={learningEntries} />
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">

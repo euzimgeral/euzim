@@ -14,12 +14,12 @@ const VARIANTS = {
 } as const;
 
 const SIZES = {
-  /** App shell / marketing header */
-  header: { height: 36, width: 96, className: "h-8 w-auto sm:h-9" },
+  /** App shell / marketing header — alinhado à altura dos botões sm */
+  header: { height: 28, width: 84, className: "h-7 w-auto" },
   /** Login / signup */
   auth: { height: 72, width: 192, className: "h-14 w-auto sm:h-16" },
   /** Compact chips, onboarding pill, reader chrome */
-  compact: { height: 28, width: 72, className: "h-6 w-auto sm:h-7" },
+  compact: { height: 24, width: 72, className: "h-6 w-auto" },
   /** Inline no fluxo de texto (~1em via className) */
   inline: { height: 28, width: 72, className: "h-[1.05em] w-auto" },
 } as const;
@@ -51,7 +51,9 @@ export function BrandLogo({
       height={dims.height}
       priority={priority}
       className={cn("object-contain object-left", dims.className, className)}
-      style={{ width: "auto", height: "auto" }}
+      // width auto mantém proporção; altura vem só do className (h-*).
+      // height:auto no style anulava h-7/h-8 e explodia a logo no header.
+      style={{ width: "auto" }}
     />
   );
 

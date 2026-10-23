@@ -10,7 +10,7 @@ export type ProfileGateRow = {
 /** REST + secret key — bem mais rápido/estável que supabase-js admin no Mac. */
 export async function fetchProfileViaRest(
   userId: string,
-  timeoutMs = 12_000,
+  timeoutMs = 4_000,
 ): Promise<ProfileGateRow | null> {
   const { url, secretKey } = getSupabaseEnv();
   if (!url || !secretKey) return null;
@@ -42,7 +42,7 @@ export async function fetchProfileViaRest(
 
 export async function hasPixarAvatarViaRest(
   userId: string,
-  timeoutMs = 12_000,
+  timeoutMs = 4_000,
 ): Promise<boolean> {
   const { url, secretKey } = getSupabaseEnv();
   if (!url || !secretKey) return false;

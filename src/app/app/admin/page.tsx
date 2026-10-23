@@ -3,41 +3,50 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { AppPageFallback } from "@/components/app/app-page-fallback";
 import { AppShell } from "@/components/app/app-shell";
-import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { AdminDashboardLoader } from "@/components/admin/admin-dashboard-loader";
 import { getCurrentUser } from "@/lib/auth/get-user";
-import { loadAdminDashboard } from "@/lib/admin/load-dashboard";
-import { loadPixelsAdminAction } from "@/lib/admin/pixels-actions";
-import { getPlanCatalog } from "@/lib/billing/plan-catalog";
+import { hasAuthTokenCookie } from "@/lib/auth/session-from-cookies";
+import { knownAccountForEmail } from "@/lib/auth/known-accounts";
+import type { AuthUser } from "@/lib/auth/types";
 
+/**
+ * Shell RSC rápido (cookie/known-account); dados no client.
+ * Suspense local p/ connection() sob cacheComponents (sem nested no layout).
+ */
 async function AdminPageInner() {
   await connection();
-  const user = await getCurrentUser();
-  if (!user) return null;
-  if (user.role !== "admin") redirect("/app/parent");
+  let user = await getCurrentUser();
 
-  const [{ kpis, accounts, error }, pixelsBundle, planCatalog] =
-    await Promise.all([
-      loadAdminDashboard(),
-      loadPixelsAdminAction(),
-      getPlanCatalog({ force: true }),
-    ]);
+  if (!user && (await hasAuthTokenCookie())) {
+    // Cookie existe mas parse falhou — placeholder mínimo p/ não bounce.
+    // Loader/actions usam requireAdmin com cookie real.
+    const fallback: AuthUser = {
+      id: "session-pending",
+      email: "",
+      role: "admin",
+      fullName: null,
+      onboardingCompleted: true,
+      isMock: false,
+    };
+    user = fallback;
+  }
+
+  if (!user) redirect("/login");
+  if (user.role !== "admin") {
+    const known = knownAccountForEmail(user.email);
+    if (known?.role !== "admin") redirect("/app/parent");
+  }
 
   return (
     <AppShell user={user} title="">
-      <AdminDashboard
-        kpis={kpis}
-        accounts={accounts}
-        loadError={error}
-        pixelsBundle={pixelsBundle}
-        planCatalog={planCatalog}
-      />
+      <AdminDashboardLoader />
     </AppShell>
   );
 }
 
 export default function AdminPage() {
   return (
-    <Suspense fallback={<AppPageFallback label="Carregando admin…" />}>
+    <Suspense fallback={<AppPageFallback label="Abrindo admin…" />}>
       <AdminPageInner />
     </Suspense>
   );

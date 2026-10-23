@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,17 @@ import { trackBrowserEvent } from "@/lib/tracking/client-browser";
 type Mode = "login" | "signup";
 
 const initial: AuthActionResult = {};
+
+function friendlyAuthError(raw: string): string {
+  if (
+    /fetch failed|failed to fetch|networkerror|econnreset|etimedout|enotfound|socket|aborted|timeout|AuthRetryable/i.test(
+      raw,
+    )
+  ) {
+    return "Não foi possível conectar ao servidor de login. Aguarde alguns segundos e tente de novo.";
+  }
+  return raw;
+}
 
 export function AuthForm({
   mode,
@@ -64,10 +75,24 @@ export function AuthForm({
           commerce: { product: "Cadastro Euzim" },
         });
       }
-      return action(prev, formData);
+      try {
+        return await action(prev, formData);
+      } catch (err) {
+        // Soft-nav Next às vezes estoura TypeError: fetch failed no follow do redirect.
+        const msg = err instanceof Error ? err.message : String(err ?? "");
+        if (/NEXT_REDIRECT|NEXT_HTTP_ERROR_FALLBACK/i.test(msg)) throw err;
+        return { error: friendlyAuthError(msg || "Falha ao entrar.") };
+      }
     },
     initial,
   );
+
+  useEffect(() => {
+    const dest = state.redirectTo;
+    if (!dest || !dest.startsWith("/") || dest.startsWith("//")) return;
+    // Hard navigation: cookies já gravados; evita soft-nav RSC → localhost timeout.
+    window.location.assign(dest);
+  }, [state.redirectTo]);
   const safeNext =
     nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
       ? nextPath
@@ -153,9 +178,12 @@ export function AuthForm({
           </div>
           {state.error ? (
             <p className="text-sm text-destructive" role="alert">
-              {/fetch failed/i.test(state.error)
-                ? "Não foi possível conectar ao servidor de login (rede/Supabase). Aguarde alguns segundos e tente de novo."
-                : state.error}
+              {friendlyAuthError(state.error)}
+            </p>
+          ) : null}
+          {state.redirectTo && !state.error ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              Entrando…
             </p>
           ) : null}
         </CardContent>

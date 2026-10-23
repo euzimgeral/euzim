@@ -65,7 +65,7 @@ export function AppShellNav({
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <BrandLogo
-              size="header"
+              size="compact"
               href={kidsMode ? "/app/kids" : "/app/parent"}
             />
             {title.trim() ? (

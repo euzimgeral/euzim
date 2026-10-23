@@ -1,7 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/get-user";
+import { analyzeFeedbackLearning } from "@/lib/learning/analyze-feedback";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { regenerateStoryPageImage } from "@/lib/stories/generate-story-images";
@@ -100,16 +102,96 @@ export async function saveStoryPageFeedbackAction(input: {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await db.from("story_page_feedback").upsert(row, {
-    onConflict: "story_id,parent_id,page_index",
-  });
+  const { data: saved, error } = await db
+    .from("story_page_feedback")
+    .upsert(row, { onConflict: "story_id,parent_id,page_index" })
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
       ok: false,
-      error:
-        "Não consegui salvar o feedback. Aplique a migration story_page_feedback no Supabase.",
+      error: "Não consegui salvar o feedback. Tente de novo em instantes.",
     };
+  }
+
+  if (input.rating === "dislike" && comment) {
+    const pages =
+      (
+        story.text_content as {
+          pages?: { index?: number; text?: string }[];
+        } | null
+      )?.pages ?? [];
+    const pageText =
+      pages.find((p) => p.index === input.pageIndex)?.text ||
+      pages[input.pageIndex]?.text ||
+      "";
+
+    const imageUrl = row.image_url as string | null;
+    const title = `Feedback pág. ${input.pageIndex + 1} — ${story.title || "história"}`;
+
+    let entryId: string | null = null;
+    if (saved?.id) {
+      const { data: existing } = await db
+        .from("ai_learning_entries")
+        .select("id, status")
+        .eq("source_feedback_id", saved.id)
+        .maybeSingle();
+      if (existing?.id) {
+        entryId = existing.id as string;
+        await db
+          .from("ai_learning_entries")
+          .update({
+            title: title.slice(0, 240),
+            page_image_url: imageUrl,
+            page_text: String(pageText || "").slice(0, 2000) || null,
+            user_feedback: comment,
+            status: "pending",
+            error_message: null,
+            ai_observation: null,
+            ai_summary: null,
+            ai_lessons: {},
+            processed_at: null,
+          })
+          .eq("id", entryId);
+      }
+    }
+
+    if (!entryId) {
+      const { data: learningRow } = await db
+        .from("ai_learning_entries")
+        .insert({
+          type: "feedback",
+          title: title.slice(0, 240),
+          added_by_user_id: user.id,
+          added_by_email: user.email || "",
+          status: "pending",
+          source_feedback_id: saved?.id ?? null,
+          story_id: input.storyId,
+          page_index: input.pageIndex,
+          page_image_url: imageUrl,
+          page_text: String(pageText || "").slice(0, 2000) || null,
+          user_feedback: comment,
+        })
+        .select("id")
+        .maybeSingle();
+      entryId = (learningRow?.id as string) || null;
+    }
+
+    if (entryId) {
+      const jobId = entryId;
+      after(async () => {
+        try {
+          await analyzeFeedbackLearning(jobId);
+        } catch (err) {
+          console.error(
+            "[learning] analyzeFeedbackLearning failed",
+            jobId,
+            err,
+          );
+        }
+      });
+    }
   }
 
   revalidatePath(`/app/kids/read/${input.storyId}`);

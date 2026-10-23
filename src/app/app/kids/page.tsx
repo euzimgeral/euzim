@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
-import { BookOpen, Gamepad2, Star } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { AppPageFallback } from "@/components/app/app-page-fallback";
 import { AppShell } from "@/components/app/app-shell";
 import { PinGuardButton } from "@/components/kids/pin-guard";
@@ -31,7 +31,7 @@ async function KidsPageInner() {
               Olá{childName ? `, ${childName}` : ""}!
             </h1>
             <p className="max-w-xl text-lg text-muted-foreground">
-              Escolha uma história para ler. No final tem um quiz divertido.
+              Escolha uma história para ler.
             </p>
           </div>
           <PinGuardButton
@@ -84,23 +84,6 @@ async function KidsPageInner() {
             </ul>
           )}
         </section>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border/60 p-5">
-            <Gamepad2 className="mb-3 size-6 text-amber-700" />
-            <p className="font-heading text-lg font-semibold">Quiz Therapy</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Aparece na última página de cada história.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/60 p-5">
-            <Star className="mb-3 size-6 text-amber-700" />
-            <p className="font-heading text-lg font-semibold">Favoritos</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Em breve você poderá marcar as preferidas.
-            </p>
-          </div>
-        </div>
       </div>
     </AppShell>
   );

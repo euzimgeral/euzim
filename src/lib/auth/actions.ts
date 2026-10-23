@@ -28,6 +28,8 @@ import { dispatchTrackingEvent } from "@/lib/tracking/dispatch";
 export type AuthActionResult = {
   error?: string;
   success?: boolean;
+  /** Hard nav no cliente — evita soft-nav Next (`failed to get redirect response`). */
+  redirectTo?: string;
 };
 
 function normalizeEmail(email: string) {
@@ -47,7 +49,7 @@ function mapAuthNetworkError(err: unknown, fallback?: string): string {
       msg,
     )
   ) {
-    return "Não foi possível conectar ao servidor de login (rede/Supabase). Aguarde alguns segundos e tente de novo.";
+    return "Não foi possível conectar ao servidor de login. Aguarde alguns segundos e tente de novo.";
   }
   return msg || fallback || "Erro de autenticação.";
 }
@@ -122,15 +124,18 @@ export async function signUpAction(
       friendPhotos: [],
       completed: false,
     });
-    // Await antes do redirect — fire-and-forget era abortado e Lead sumia.
-    await dispatchTrackingEvent({
+    // Hard nav no cliente: tracking em background (não bloquear cadastro).
+    void dispatchTrackingEvent({
       event: "Lead",
       eventId: leadEventId,
       user: { email, fullName, phone, userId: mockId },
       commerce: { product: "Cadastro Euzim" },
     }).catch(() => ({ eventId: leadEventId || "", ok: false }));
     const nextMock = String(formData.get("next") ?? "").trim();
-    redirect(nextMock.startsWith("/") ? nextMock : "/onboarding");
+    return {
+      success: true,
+      redirectTo: nextMock.startsWith("/") ? nextMock : "/onboarding",
+    };
   }
 
   const admin = createAdminClient();
@@ -190,24 +195,28 @@ export async function signUpAction(
         })
         .eq("id", newUserId);
     }
-    await ensureReferralCode(newUserId);
-    await applyReferralAttribution(newUserId);
-    // Await CAPI/webhooks antes do redirect (mesmo event_id do browser).
-    await dispatchTrackingEvent({
-      event: "Lead",
-      eventId: leadEventId,
-      user: {
-        email,
-        fullName,
-        phone,
-        userId: newUserId,
-      },
-      commerce: { product: "Cadastro Euzim" },
-    }).catch(() => ({ eventId: leadEventId || "", ok: false }));
+    void Promise.all([
+      ensureReferralCode(newUserId),
+      applyReferralAttribution(newUserId),
+      dispatchTrackingEvent({
+        event: "Lead",
+        eventId: leadEventId,
+        user: {
+          email,
+          fullName,
+          phone,
+          userId: newUserId,
+        },
+        commerce: { product: "Cadastro Euzim" },
+      }),
+    ]).catch(() => {});
   }
 
   const next = String(formData.get("next") ?? "").trim();
-  redirect(next.startsWith("/") ? next : "/onboarding");
+  return {
+    success: true,
+    redirectTo: next.startsWith("/") ? next : "/onboarding",
+  };
 }
 
 export async function signInAction(
@@ -231,12 +240,13 @@ export async function signInAction(
       const onboardingCompleted =
         known?.onboardingCompleted ??
         (Boolean(existing.onboardingCompleted) || role === "admin");
-      redirect(
-        resolvePostAuthPath(
+      return {
+        success: true,
+        redirectTo: resolvePostAuthPath(
           { role, onboardingCompleted },
           String(formData.get("next") ?? ""),
         ),
-      );
+      };
     }
 
     const role =
@@ -249,12 +259,13 @@ export async function signInAction(
       role,
       onboardingCompleted,
     });
-    redirect(
-      resolvePostAuthPath(
+    return {
+      success: true,
+      redirectTo: resolvePostAuthPath(
         { role, onboardingCompleted },
         String(formData.get("next") ?? ""),
       ),
-    );
+    };
   }
 
   const supabase = await createClient();
@@ -351,15 +362,16 @@ export async function signInAction(
       }
     }
 
-    redirect(
-      resolvePostAuthPath(
+    return {
+      success: true,
+      redirectTo: resolvePostAuthPath(
         { role, onboardingCompleted },
         String(formData.get("next") ?? ""),
       ),
-    );
+    };
   }
 
-  redirect("/app/parent");
+  return { success: true, redirectTo: "/app/parent" };
 }
 
 export async function signOutAction() {

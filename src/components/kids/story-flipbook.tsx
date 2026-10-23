@@ -152,14 +152,6 @@ export function StoryFlipbook({
     ]),
   );
 
-  function onImageReplaced(pageIndex: number, imageUrl: string) {
-    setPages((prev) =>
-      prev.map((p) =>
-        p.pageIndex === pageIndex ? { ...p, imageUrl } : p,
-      ),
-    );
-  }
-
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col"
@@ -353,7 +345,6 @@ export function StoryFlipbook({
                         imageUrl={page.imageUrl}
                         initial={feedbackByPage.get(page.pageIndex) ?? null}
                         palette={palette}
-                        onImageReplaced={onImageReplaced}
                         toolbarEnd={navControls}
                       />
                     );

@@ -25,10 +25,8 @@ import {
   STORY_SAFE_FRAME_HINT,
   type StoryImageSize,
 } from "@/lib/stories/image-formats";
-import {
-  feedbackBoostFromComment,
-  loadFeedbackLessons,
-} from "@/lib/stories/page-feedback";
+import { feedbackBoostFromComment } from "@/lib/stories/page-feedback";
+import { loadLearningMemory } from "@/lib/learning/load-memory";
 import { ensureCompanionVisualTraits } from "@/lib/stories/companion-traits";
 import { visionCheckStoryPage } from "@/lib/stories/vision-page-check";
 import { speciesLockPromptLine } from "@/lib/stories/story-cast";
@@ -295,7 +293,10 @@ export async function generateStoryPageImages(input: {
   const framingNotes: string[] = [];
   const usedUrls = new Set<string>();
   const names = [input.cast.childName, input.cast.friendName];
-  const lessons = await loadFeedbackLessons(input.userId);
+  const lessons = await loadLearningMemory({
+    theme: input.storyTitle,
+    userId: input.userId,
+  });
 
   for (let i = 0; i < input.pages.length; i++) {
     const page = input.pages[i];
@@ -453,7 +454,10 @@ export async function regenerateStoryPageImage(input: {
   const refs = await loadRefs(cast);
   if (refs.length === 0) return null;
 
-  const lessons = await loadFeedbackLessons(input.userId);
+  const lessons = await loadLearningMemory({
+    theme: input.storyTitle,
+    userId: input.userId,
+  });
   const names = [cast.childName, cast.friendName];
   const size = imageSizeForStoryPage(input.pageIndex, input.totalPages);
   const framingNotes = [
